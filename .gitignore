@@ -1,3 +1,7 @@
+# Database generated while developing with Pyramid generated project
+cati_manager.sqlite
+
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
