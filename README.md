@@ -1,6 +1,11 @@
 cati_manager
 ============
 [![Build Status](https://travis-ci.org/sapetnioc/cati_manager.svg?branch=master)](https://travis-ci.org/sapetnioc/cati_manager)
+[![Python27](https://img.shields.io/badge/python-2.7-blue.svg)](https://travis-ci.org/sapetnioc/cati_manager)
+[![Python27](https://img.shields.io/badge/python-2.7-blue.svg)](https://travis-ci.org/sapetnioc/cati_manager)
+
+<!--.. |Python35| image:: https://img.shields.io/badge/python-3.5-blue.svg
+.. _Python35: https://badge.fury.io/py/scikit-learn-->
 
 
 Getting Started
