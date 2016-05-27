@@ -1,5 +1,7 @@
-cati_manager README
-==================
+cati_manager
+============
+[![Build Status](https://travis-ci.org/sapetnioc/cati_manager.svg?branch=master)](https://travis-ci.org/sapetnioc/cati_manager)
+
 
 Getting Started
 ---------------
