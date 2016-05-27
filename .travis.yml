@@ -6,8 +6,8 @@ python:
 
 before_install:
     - pip install -U pip
-    - pip install pytest pytest-cov
-    - pip install coveralls
+    - pip install -U pytest pytest-cov
+    - pip install -U coveralls
 
 install:
     - pip install -e .
