@@ -4,20 +4,17 @@ python:
     - "2.7"
     - "3.5"
 
-before_install:
-    - pip install -U pip
-    - pip install -U pytest pytest-cov
-    - pip install -U coveralls
-
 install:
+    - pip install -U pip
+    #- pip install -U pytest pytest-cov
+    - pip install -U python-coveralls coverage nose
     - pip install -e .
 
 script:
-    - py.test
+    - nosetests --with-coverage
 
 after_success:
     # Run coveralls only once, not once for each Python release
-    - echo $TRAVIS_PYTHON_VERSION
     - if [[ $TRAVIS_PYTHON_VERSION == "3.5" ]]; then
           coveralls || echo "Coveralls upload failed";
       else;
