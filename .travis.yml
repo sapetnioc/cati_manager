@@ -17,6 +17,6 @@ after_success:
     # Run coveralls only once, not once for each Python release
     - if [[ $TRAVIS_PYTHON_VERSION == "3.5" ]]; then
           coveralls || echo "Coveralls upload failed";
-      else;
+      else
           echo "Not running Coveralls"
       fi
