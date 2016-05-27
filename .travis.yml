@@ -18,5 +18,5 @@ after_success:
     - if [[ $TRAVIS_PYTHON_VERSION == "3.5" ]]; then
           coveralls || echo "Coveralls upload failed";
       else
-          echo "Not running Coveralls"
+          echo "Not running Coveralls";
       fi
