@@ -1,0 +1,3 @@
+[run]
+source = cati_manager
+omit = cati_manager/test*
