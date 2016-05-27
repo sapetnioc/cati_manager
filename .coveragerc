@@ -1,3 +1,7 @@
 [run]
 source = cati_manager
-omit = cati_manager/test*
+omit = 
+    */cati_manager/test*
+    */python?.?/*
+    */site-packages/nose/*
+
