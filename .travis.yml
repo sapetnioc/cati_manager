@@ -5,6 +5,7 @@ python:
     - "3.5"
 
 before_install:
+    - pip install -U pip
     - pip install pytest pytest-cov
     - pip install coveralls
 
@@ -15,4 +16,8 @@ script:
     - py.test
 
 after_success:
-    - coveralls
+    # Run coveralls only once, not once for each Python release
+    - if [[ $ENV == python=3.5* ]]; then
+          coveralls;
+      fi
+
