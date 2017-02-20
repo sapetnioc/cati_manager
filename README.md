@@ -8,8 +8,8 @@ cati_manager
 
 Getting Started
 ---------------
-
-VENV=/tmp/venv
+```
+VENV=/tmp/venv<br>
 SRC=/tmp/cati_manager
 
 git clone https://github.com/sapetnioc/cati_manager.git $SRC
@@ -18,5 +18,4 @@ cd $SRC
 $VENV/bin/python setup.py develop
 $VENV/bin/initialize_cati_manager_db $SRC/development.ini
 $VENV/bin/pserve development.ini --reload
-
-
+```
