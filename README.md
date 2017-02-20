@@ -9,7 +9,11 @@ cati_manager
 Getting Started
 ---------------
 
-- cd <directory containing this file>
+- VENV=&lt;directory where to install cati_manager&gt;
+
+- virtualenv $VENV
+
+- cd &lt;source directory of cati_manager&gt;
 
 - $VENV/bin/pip install -e .
 
