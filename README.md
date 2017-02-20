@@ -9,7 +9,7 @@ cati_manager
 Getting Started
 ---------------
 ```
-VENV=/tmp/venv<br>
+VENV=/tmp/venv
 SRC=/tmp/cati_manager
 
 git clone https://github.com/sapetnioc/cati_manager.git $SRC
