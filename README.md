@@ -9,15 +9,14 @@ cati_manager
 Getting Started
 ---------------
 
-- VENV=&lt;directory where to install cati_manager&gt;
+VENV=/tmp/venv
+SRC=/tmp/cati_manager
 
-- virtualenv $VENV
+git clone https://github.com/sapetnioc/cati_manager.git $SRC
+virtualenv $VENV
+cd $SRC
+$VENV/bin/python setup.py develop
+$VENV/bin/initialize_cati_manager_db $SRC/development.ini
+$VENV/bin/pserve development.ini --reload
 
-- cd &lt;source directory of cati_manager&gt;
-
-- $VENV/bin/pip install -e .
-
-- $VENV/bin/initialize_cati_manager_db development.ini
-
-- $VENV/bin/pserve development.ini
 
