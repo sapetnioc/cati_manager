@@ -1,6 +1,8 @@
 from __future__ import absolute_import
 
-import urllib
+import html
+
+import psycopg2
 
 from pyramid.view import view_config, forbidden_view_config
 from pyramid.security import remember, forget
@@ -11,11 +13,9 @@ from pyramid.httpexceptions import HTTPFound
 @forbidden_view_config(renderer='templates/login.jinja2')
 def forbidden(context, request):
     if not request.authenticated_userid:
-        url = '/login?%s' % urllib.urlencode({'came_from': request.url})
-        subrequest = request.blank(url, cookies=request.cookies)
-        subrequest.registry = request.registry
-        response = request.invoke_subrequest(subrequest)
-        return response
+        url = '%s?came_from=%s' % (request.route_url('login'), html.escape(request.url))
+        request.session.flash('You must be logged in to access the requested page', 'warning')
+        return HTTPFound(location=url)
     else:
         return context
 
@@ -34,11 +34,13 @@ def login(request):
     if 'form.submitted' in request.params:
         login = request.params['login']
         password = request.params['password']
-        if True: # TODO: check password here
+        database_url = request.registry.settings['cati_manager.database']
+        try:
+            psycopg2.connect(database_url, user=login, password=password)
             headers = remember(request, login)
             return HTTPFound(location=came_from,
                              headers=headers)
-        else:
+        except psycopg2.Error:
             message = 'Invalid user name or password'
 
     return dict(

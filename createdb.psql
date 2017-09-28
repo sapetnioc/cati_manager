@@ -1,66 +1,42 @@
+DROP ROLE postgresci;
 DROP DATABASE cati_manager;
 DROP ROLE cati_manager;
+DROP role test;
+DROP schema postgresci CASCADE;
+DROP ROLE postgresci;
 
 \set ON_ERROR_STOP on
 
+
 CREATE ROLE cati_manager LOGIN
-  ENCRYPTED PASSWORD 'md5eeba30ce2ee2d67dde68efeb0476e94f'
+  ENCRYPTED PASSWORD 'cati'
   NOSUPERUSER NOINHERIT NOCREATEDB CREATEROLE NOREPLICATION;
 
 CREATE DATABASE cati_manager
   WITH OWNER = cati_manager;
 
 \connect cati_manager
+
+-- install postgresci
+\i postgresci.sql
+
+-- cati_manager is configured with NOHINERIT, so it does not inherit 
+-- permissions from roles it belong to. Therefore, it is necessary to
+-- explicitly grant it accesses to postgresci.
+GRANT ALL ON SCHEMA postgresci TO cati_manager;
+GRANT ALL ON TABLE postgresci.project TO cati_manager;
+GRANT ALL ON TABLE postgresci.installed_component TO cati_manager;
+GRANT postgresci TO cati_manager;
+
+
 SET ROLE cati_manager;
 
 
-CREATE TABLE identity ( login TEXT PRIMARY KEY, email TEXT, first_name TEXT, last_name TEXT, validated_by TEXT REFERENCES identity(login) );
+CREATE schema cati_manager;
+INSERT INTO postgresci.project VALUES ('catidb4', '/home/yc176684/git/cati_manager/postgresci/catidb4', 'devel');
+INSERT INTO postgresci.installed_component VALUES ( 'catidb4', 'cati_manager', 'cati_manager' );
 
-CREATE FUNCTION create_identity_role() RETURNS trigger AS $$
-BEGIN
-    EXECUTE 'CREATE ROLE ' || quote_ident(NEW.login) || ' LOGIN;';
-    EXECUTE 'GRANT ' || quote_ident(NEW.login) || ' TO cati_manager;';
-    RETURN NEW;
-END $$ LANGUAGE plpgsql;
-CREATE TRIGGER create_identity_role BEFORE INSERT ON identity FOR EACH ROW EXECUTE PROCEDURE create_identity_role();
-
-CREATE OR REPLACE FUNCTION delete_identity_role() RETURNS trigger AS $$
-BEGIN
-    EXECUTE 'REVOKE ' || quote_ident(OLD.login) || ' FROM cati_manager;';
-    EXECUTE 'REASSIGN OWNED BY ' || quote_ident(OLD.login) || ' TO CURRENT_USER;';
-    EXECUTE 'DROP OWNED BY ' || quote_ident(OLD.login) || ';';
-    EXECUTE 'DROP ROLE ' || quote_ident(OLD.login) || ';';
-    RETURN NEW;
-END $$ LANGUAGE plpgsql;
-CREATE TRIGGER delete_identity_role BEFORE DELETE ON identity FOR EACH ROW EXECUTE PROCEDURE delete_identity_role();
-
-
-
-CREATE TABLE project ( id TEXT PRIMARY KEY, 
-                       name TEXT,
-                       description TEXT );
-CREATE TABLE resource ( id TEXT PRIMARY KEY, 
-                       name TEXT,
-                       description TEXT );
-CREATE TABLE credential ( project TEXT REFERENCES project, 
-                          id TEXT, name TEXT, 
-                          description TEXT, 
-                          resource TEXT REFERENCES resource, 
-                          resource_access TEXT [],
-                          PRIMARY KEY ( project, id ) );
-
-CREATE FUNCTION create_credential_role() RETURNS trigger AS $$
-BEGIN
-    EXECUTE 'CREATE ROLE ' || quote_ident(NEW.id) || ' NOLOGIN;';
-    RETURN NEW;
-END $$ LANGUAGE plpgsql;
-CREATE TRIGGER create_credential_role BEFORE INSERT ON credential FOR EACH ROW EXECUTE PROCEDURE create_credential_role();
-
-CREATE FUNCTION delete_credential_role() RETURNS trigger AS $$
-BEGIN
-    EXECUTE 'REASSIGN OWNED BY ' || quote_ident(OLD.id) || ' TO CURRENT_USER;';
-    EXECUTE 'DROP OWNED BY ' || quote_ident(OLD.id) || ';';
-    EXECUTE 'DROP ROLE ' || quote_ident(OLD.id) || ';';
-    RETURN OLD;
-END $$ LANGUAGE plpgsql;
-CREATE TRIGGER delete_credential_role BEFORE DELETE ON credential FOR EACH ROW EXECUTE PROCEDURE delete_credential_role();
+INSERT INTO cati_manager.identity VALUES ('test', 'md593b5029edd167b4c36f8d9d4f409c56b', 'test@test.com');
+INSERT INTO cati_manager.project VALUES ('test_project', 'A test project');
+INSERT INTO cati_manager.credential VALUES('test_project', 'credential');
+INSERT INTO cati_manager.granting VALUES('test_project', 'credential', 'test');
