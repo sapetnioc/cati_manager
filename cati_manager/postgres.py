@@ -1,4 +1,8 @@
+from collections import OrderedDict
+
 import psycopg2
+
+from pyramid.exceptions import NotFound
 
 connections = {}
 def connect(database_url, database_user, database_password, target_user):
@@ -32,4 +36,37 @@ def authentication_callback(login, request):
             cur.execute('SELECT DISTINCT credential.project, credential.id FROM identity, granting, project, credential WHERE identity.login=%s AND granting.login = identity.login AND credential.id = granting.credential', (login,))
             principals = ['%s_%s' % i for i in cur]
     return [ login ] + principals
- 
+
+def table_info(db, schema, table):
+    if schema is None:
+        schema = 'current_schema'
+    else:
+        schema = "'%s'" % schema
+    sql = '''
+        SELECT c.column_name,
+               c.ordinal_position,
+               c.column_default,
+               c.is_nullable,
+               c.data_type,
+               c.character_maximum_length,
+               e.data_type as element_type 
+        FROM information_schema.columns c LEFT JOIN information_schema.element_types e
+        ON ((c.table_catalog, c.table_schema, c.table_name, 'TABLE', c.dtd_identifier)
+           = (e.object_catalog, e.object_schema, e.object_name, e.object_type, e.collection_type_identifier))
+        WHERE c.table_schema = %s AND c.table_name = '%s'
+        ORDER BY c.ordinal_position;''' % (schema, table)
+    columns = OrderedDict()
+    with db:
+        with db.cursor() as cur:
+            cur.execute(sql)
+            names = tuple(i[0] for i in cur.description)
+            for row in cur:
+                columns[row[0]] = dict((names[i],row[i]) for i in range(1,len(names)))
+            if not columns:
+                sql = '''SELECT count(*) 
+                         FROM information_schema.tables AS t 
+                         WHERE t.table_schema = %s AND t.table_name = '%s';''' % (schema, table)
+                cur.execute(sql)
+                if cur.fetchone()[0] ==  0:
+                    raise NotFound('No database table or view named "%s"' % table)
+    return {'columns': columns}
