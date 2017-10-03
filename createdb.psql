@@ -1,7 +1,11 @@
 DROP ROLE postgresci;
 DROP DATABASE cati_manager;
 DROP ROLE cati_manager;
-DROP role test;
+DROP ROLE cati_manager$valid_user;
+DROP ROLE cati_manager$user_moderator;
+DROP role pending;
+DROP role valid;
+DROP role usermod;
 DROP schema postgresci CASCADE;
 DROP ROLE postgresci;
 
@@ -36,7 +40,18 @@ CREATE schema cati_manager;
 INSERT INTO postgresci.project VALUES ('catidb4', '/home/yc176684/git/cati_manager/postgresci/catidb4', 'devel');
 INSERT INTO postgresci.installed_component VALUES ( 'catidb4', 'cati_manager', 'cati_manager' );
 
-INSERT INTO cati_manager.identity VALUES ('test', 'md593b5029edd167b4c36f8d9d4f409c56b', 'test@test.com');
-INSERT INTO cati_manager.project VALUES ('test_project', 'A test project');
-INSERT INTO cati_manager.credential VALUES('test_project', 'credential');
-INSERT INTO cati_manager.granting VALUES('test_project', 'credential', 'test');
+INSERT INTO cati_manager.identity (login, password) VALUES ('pending', 'pending');
+
+INSERT INTO cati_manager.identity (login, password) VALUES ('valid', 'valid');
+INSERT INTO cati_manager.granting (project, credential, login) VALUES ('cati_manager', 'valid_user', 'valid');
+
+
+INSERT INTO cati_manager.identity (login, password) VALUES ('usermod', 'usermod');
+INSERT INTO cati_manager.granting (project, credential, login) VALUES ('cati_manager', 'valid_user', 'usermod');
+INSERT INTO cati_manager.granting (project, credential, login) VALUES ('cati_manager', 'user_moderator', 'usermod');
+
+
+-- INSERT INTO cati_manager.identity VALUES ('test', 'md593b5029edd167b4c36f8d9d4f409c56b', 'test@test.com');
+-- INSERT INTO cati_manager.project VALUES ('test_project', 'A test project');
+-- INSERT INTO cati_manager.credential VALUES('test_project', 'credential');
+-- INSERT INTO cati_manager.granting VALUES('test_project', 'credential', 'test');

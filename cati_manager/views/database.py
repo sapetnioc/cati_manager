@@ -4,6 +4,7 @@ from pyramid.view import view_config
 
 from cati_manager.postgres import rconnect, table_info
 
+
 def includeme(config):
     config.add_route('table_info', '/db/table/{table}/info')
     config.add_route('table_data', '/db/table/{table}/data')

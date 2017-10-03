@@ -8,6 +8,12 @@ from pyramid.view import view_config, forbidden_view_config
 from pyramid.security import remember, forget
 from pyramid.httpexceptions import HTTPFound
 
+from cati_manager.postgres import rconnect, table_info, table_to_form_widgets
+
+def includeme(config):
+    config.add_route('login', '/login')
+    config.add_route('logout', '/logout')
+    config.add_route('register', '/register')
 
 
 @forbidden_view_config(renderer='templates/login.jinja2')
@@ -55,3 +61,21 @@ def logout(request):
     url = request.route_url('home')
     return HTTPFound(location=url,
                      headers=headers)
+
+
+@view_config(route_name='register', request_method='GET', renderer='templates/database_form.jinja2')
+def registration_form(request):
+    ti = table_info(rconnect(request), 'cati_manager', 'identity')
+    widgets = table_to_form_widgets(ti)
+    return {
+        'form_widgets': widgets,
+        'form_buttons': ['<input name="register" type="submit" value="Register">'],
+    }
+
+@view_config(route_name='register', request_method='POST', renderer='json')
+def registration_validation(request):
+    errors = dict((k, 'Missing value for %s' % k) for k, v in request.params.items() if not v)
+    if errors:
+        return errors
+    request.session.flash('User succesfully registered', 'success')
+    return {'redirection': request.application_url}
