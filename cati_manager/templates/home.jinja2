@@ -9,12 +9,12 @@
   Your account is not validated yet. You will receive an email when a moderator take a decision about your registration request.
   {%- else -%}
   {%- for d in dashboards %}
-    <h2>{% if d.title_glyphicon %}<span class="glyphicon glyphicon-{{d.title_glyphicon}}" aria-hidden="true"></span> {% endif %}{{d.title|safe}}</h2>
-    <blockquote>
-    {%- for l in d.lines %}
-      <p>{{l|safe}}</p>
-    {%- endfor -%}
-    </blockquote>
+    {%- import 'data/' + d.item_type + '.jinja2' as data_type -%}
+    <h2>{{data_type.title()|safe}}</h2>
+    {% for item in d['items'] %}
+      {%- set item_id = 'item_' ~ loop.index -%}
+      {{data_type.item(item, item_id)|safe}}
+    {% endfor -%}
   {%- endfor -%}
   {% endif %}
 </div>

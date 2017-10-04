@@ -14,7 +14,7 @@ CREATE TABLE identity (
     registration_time TIMESTAMP );
 INSERT INTO column_properties VALUES ('identity', 'first_name', '{"label": "first name"}');
 INSERT INTO column_properties VALUES ('identity', 'last_name', '{"label": "last name"}');
-INSERT INTO column_properties VALUES ('identity', 'password', '{"double_check": true}');
+INSERT INTO column_properties VALUES ('identity', 'password', '{"html_type": "password", "double_check": true}');
 INSERT INTO column_properties VALUES ('identity', 'registration_time', '{"visible": false}');
 
 INSERT INTO identity ( login, registration_time ) VALUES ( 'cati_manager', now() ); 

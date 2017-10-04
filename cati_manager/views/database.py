@@ -13,7 +13,7 @@ def includeme(config):
     config.add_route('db_test', '/db/test')
 
 
-@view_config(route_name='table_info', renderer='json')
+@view_config(route_name='table_info', renderer='json', permission='cati_manager_valid_user')
 def table_info_view(request):
     l = request.matchdict['table'].split('.', 1)
     if len(l) < 2:

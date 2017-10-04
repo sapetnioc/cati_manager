@@ -58,7 +58,7 @@ def table_info(db, schema, table):
         ON ((c.table_name, c.column_name) = (f.table_name, f.column_name))
         WHERE c.table_schema = '{0}' AND c.table_name = '{1}'
         ORDER BY c.ordinal_position;'''.format(schema, table)
-    columns = OrderedDict()
+    columns = []
     with db:
         with db.cursor() as cur:
             cur.execute(sql)
@@ -68,7 +68,8 @@ def table_info(db, schema, table):
                 column_properties = row[-1]
                 if column_properties:
                     d.update(column_properties)
-                columns[row[0]] = d
+                d['id'] = row[0]
+                columns.append(d)
             if not columns:
                 sql = '''SELECT count(*) 
                          FROM information_schema.tables AS t 
@@ -77,24 +78,3 @@ def table_info(db, schema, table):
                 if cur.fetchone()[0] ==  0:
                     raise NotFound('No database table or view named "%s"' % table)
     return {'columns': columns}
-
-def pg2html_text(column_name, label, column_info):
-    return '<div class="form-group" name="{0}"><label class="from-control-label" for="{0}">{1}:&nbsp;</label><input name="{0}" type="text" class="form-control" placeholder="{1}"></div>'.format(column_name, label)
-
-select_pg2html_from_postgres_type = {
-    'text': pg2html_text,
-}
-
-def table_to_form_widgets(table_info):
-    widgets = []
-    for column_name, column_info in table_info['columns'].items():
-        if column_info.get('visible', True):
-            pg2html = select_pg2html_from_postgres_type.get(column_info['data_type'])
-            if pg2html:
-                label = column_info.get('label', column_name)
-                widgets.append(pg2html(column_name, label, column_info))
-                if column_info.get('double_check', False):
-                    widgets.append(pg2html('double_check_' + column_name, 'check ' + label, column_info))
-            else:
-                widgets.append('<font color="red"><b>{0}: cannot create widget for data type "{1}"</b></font>'.format(column_name, column_info['data_type']))
-    return widgets

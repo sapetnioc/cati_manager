@@ -26,10 +26,9 @@ WHERE i.login != 'cati_manager' AND
                 if cur.rowcount:
                     users = []
                     dashboards.append({
-                        'title': 'Users to validate',
-                        'title_glyphicon': 'user',
-                        'lines': users})
+                        'item_type': 'pending_user',
+                        'items': users})
                     for row in cur:
-                        users.append(row[0])
+                        users.append(dict(login=row[0], first_name=row[1], last_name=row[2]))
     return {'title': 'Dashboard',
             'dashboards': dashboards}

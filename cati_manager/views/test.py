@@ -2,7 +2,7 @@ from __future__ import absolute_import
 
 from pyramid.view import view_config
 
-from cati_manager.postgres import rconnect, table_info, table_to_form_widgets
+from cati_manager.postgres import rconnect, table_info
 
 
 @view_config(route_name='test', renderer='templates/database_form.jinja2')

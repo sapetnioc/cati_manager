@@ -8,7 +8,7 @@ from pyramid.view import view_config, forbidden_view_config
 from pyramid.security import remember, forget
 from pyramid.httpexceptions import HTTPFound
 
-from cati_manager.postgres import rconnect, table_info, table_to_form_widgets
+from cati_manager.postgres import rconnect, table_info
 
 def includeme(config):
     config.add_route('login', '/login')
@@ -65,11 +65,10 @@ def logout(request):
 
 @view_config(route_name='register', request_method='GET', renderer='templates/database_form.jinja2')
 def registration_form(request):
-    ti = table_info(rconnect(request), 'cati_manager', 'identity')
-    widgets = table_to_form_widgets(ti)
     return {
-        'form_widgets': widgets,
-        'form_buttons': ['<input name="register" type="submit" value="Register">'],
+        'data_type': 'registration',
+        'db_info': table_info(rconnect(request), 'cati_manager', 'identity'),
+        'button': 'register',
     }
 
 @view_config(route_name='register', request_method='POST', renderer='json')
