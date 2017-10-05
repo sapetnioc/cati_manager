@@ -1,6 +1,9 @@
 from collections import OrderedDict
+from datetime import date, datetime
+import json
 
 import psycopg2
+import psycopg2.extras
 
 from pyramid.exceptions import NotFound
 
@@ -8,7 +11,7 @@ from pyramid.exceptions import NotFound
 connections = {}
 def connect(database_url, database_user, database_password, target_user):
     global connections
-    
+        
     connection = connections.get((database_url, target_user))
     if connection is None:
         connection = psycopg2.connect(database_url, user=database_user, password=database_password)
@@ -78,3 +81,30 @@ def table_info(db, schema, table):
                 if cur.fetchone()[0] ==  0:
                     raise NotFound('No database table or view named "%s"' % table)
     return {'columns': columns}
+
+def table_data(db, schema, table, distinct=False, columns=None, where=None,
+               order_by=None, limit=None, offset=None, as_list=False):
+    sql = ['SELECT ']
+    if distinct:
+        sql.append('DISTINCT ')
+    sql += [(','.join(columns) if columns else '*'),
+           ' FROM ', ('%s.%s' % (schema, table) if schema else '%s' % table)]
+    if where:
+        sql += [' WHERE ', where]
+    if order_by:
+        sql += [' ORDER BY ', ','.join(order_by)]
+    if limit:
+        sql += [' LIMIT ', limit]
+    if offset:
+        sql += [' OFFSET ', offset]
+    sql = ''.join(sql)
+    
+    with db:
+        if not as_list:
+            cur = db.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+        else:
+            cur = db.cursor()
+        with cur:
+            cur.execute(sql)
+            return cur.fetchall()
+            

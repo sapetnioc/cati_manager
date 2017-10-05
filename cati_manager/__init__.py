@@ -1,9 +1,10 @@
+import datetime
+
 from pyramid.config import Configurator
 from pyramid.authentication import AuthTktAuthenticationPolicy
 from pyramid.authorization import ACLAuthorizationPolicy
 from pyramid.session import UnencryptedCookieSessionFactoryConfig
-
-import deform
+from pyramid.renderers import JSON
 
 from cati_manager.postgres import authentication_callback
 
@@ -30,6 +31,11 @@ def main(global_config, **settings):
     """
     config = Configurator(settings=settings, autocommit=True)
     config.include('pyramid_jinja2')
+    json_renderer = JSON()
+    def datetime_adapter(obj, request):
+        return obj.isoformat()
+    json_renderer.add_adapter(datetime.datetime, datetime_adapter)
+    config.add_renderer('json2', json_renderer)
     authn_policy = AuthTktAuthenticationPolicy('jfldezkjvmezafkjsdqmlfkjd', 
         hashalg='sha512',
         timeout=1200,      # User must reidentify himself after 20 minutes
@@ -41,7 +47,6 @@ def main(global_config, **settings):
     config.set_authentication_policy(authn_policy)
     config.set_session_factory(session_factory)
     
-    deform.renderer.configure_zpt_renderer()
     config.add_static_view('static_deform', 'deform:static')
     
     config.add_static_view('static', 'static', cache_max_age=3600)
