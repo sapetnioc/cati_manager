@@ -1,6 +1,7 @@
 from __future__ import absolute_import
 
 import html
+import hashlib
 
 import psycopg2
 
@@ -8,7 +9,7 @@ from pyramid.view import view_config, forbidden_view_config
 from pyramid.security import remember, forget
 from pyramid.httpexceptions import HTTPFound
 
-from cati_manager.postgres import rconnect, table_info
+from cati_manager.postgres import manager_connect, table_info, table_insert
 
 def includeme(config):
     config.add_route('login', '/login')
@@ -40,14 +41,24 @@ def login(request):
     if 'form.submitted' in request.params:
         login = request.params['login']
         password = request.params['password']
-        database_url = request.registry.settings['cati_manager.database']
-        try:
-            psycopg2.connect(database_url, user=login, password=password)
-            headers = remember(request, login)
-            return HTTPFound(location=came_from,
-                             headers=headers)
-        except psycopg2.Error:
-            message = 'Invalid user name or password'
+        with manager_connect(request) as db:
+            with db.cursor() as cur:
+                cur.execute('SELECT password FROM cati_manager.identity WHERE login=%s', [login])
+                if cur.rowcount:
+                    challenge = cur.fetchone()[0].tobytes()
+                    if hashlib.sha256(password.encode('utf-8')+challenge[32:]).digest() == challenge[:32]:
+                        headers = remember(request, login)
+                        return HTTPFound(location=came_from,
+                                         headers=headers)
+        message = 'Invalid user name or password'
+        #database_url = request.registry.settings['cati_manager.database']
+        #try:
+            #psycopg2.connect(database_url, user=login, password=password)
+            #headers = remember(request, login)
+            #return HTTPFound(location=came_from,
+                             #headers=headers)
+        #except psycopg2.Error:
+            #message = 'Invalid user name or password'
 
     return dict(
         message=message,
@@ -67,14 +78,28 @@ def logout(request):
 def registration_form(request):
     return {
         'data_type': 'registration',
-        'db_info': table_info(rconnect(request), 'cati_manager', 'identity'),
+        'db_info': table_info(manager_connect(request), 'cati_manager', 'identity'),
         'button': 'register',
     }
 
 @view_config(route_name='register', request_method='POST', renderer='json')
 def registration_validation(request):
-    errors = dict((k, 'Missing value for %s' % k) for k, v in request.params.items() if not v)
-    if errors:
-        return errors
-    request.session.flash('User succesfully registered', 'success')
+    errors = {}
+    login = request.params['login']
+    with manager_connect(request) as db:
+        with db.cursor() as cur:
+            sql = 'SELECT count(*) FROM cati_manager.identity WHERE login = %s'
+            cur.execute(sql, [login])
+            if cur.fetchone()[0]:
+                errors['login'] = 'You must choose another login'
+            if not request.params['password']:
+                errors['password'] = 'Password is mandatory'
+            if request.params['password'] != request.params['check_password']:
+                errors['check_password'] = 'Differs from password'
+            if errors:
+                return errors
+            data = dict(request.params)
+            del data['check_password']
+            table_insert(db, 'cati_manager', 'identity', data=[data])
+    request.session.flash('User %s sucessfuly registered' % login, 'success')
     return {'redirection': request.application_url}

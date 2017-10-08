@@ -22,6 +22,8 @@ CREATE DATABASE cati_manager
 
 \connect cati_manager
 
+CREATE EXTENSION IF NOT EXISTS pgcrypto;
+
 -- install postgresci
 \i postgresci.sql
 

@@ -2,7 +2,7 @@ from __future__ import absolute_import
 
 from pyramid.view import view_config
 
-from cati_manager.postgres import rconnect
+from cati_manager.postgres import user_connect
 
 def includeme(config):
     config.add_route('dashboard', '/dashboard')
@@ -12,7 +12,7 @@ def includeme(config):
 def dashboard(request):
     dashboards = []
     if request.has_permission('cati_manager_user_moderator'):
-        with rconnect(request) as db:
+        with user_connect(request) as db:
             with db.cursor() as cur:
                 sql = '''SELECT i.login, i.first_name, i.last_name
 FROM cati_manager.identity i

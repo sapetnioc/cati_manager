@@ -6,7 +6,8 @@ CREATE TABLE column_properties (
 
 CREATE TABLE identity ( 
     login TEXT PRIMARY KEY, 
-    password TEXT, 
+    password BYTEA, 
+    db_password TEXT,
     email TEXT,
     first_name TEXT,
     last_name TEXT,
@@ -21,11 +22,18 @@ INSERT INTO identity ( login, registration_time ) VALUES ( 'cati_manager', now()
 GRANT postgresci TO cati_manager;
 
 CREATE FUNCTION create_identity_role() RETURNS trigger AS $$
+DECLARE
+    salt BYTEA;
+    pwd BYTEA;
 BEGIN
     IF NEW.registration_time IS NULL THEN
         NEW.registration_time = now();
     END IF;
-    EXECUTE 'CREATE ROLE ' || quote_ident(NEW.login) || ' LOGIN ENCRYPTED PASSWORD ' || quote_nullable(NEW.password) || ';';
+    salt := substring(random()::text from 2);
+    pwd := public.digest(NEW.password || salt, 'sha256');
+    NEW.password := pwd || salt;
+    NEW.db_password := encode(NEW.password,'base64');
+    EXECUTE 'CREATE ROLE ' || quote_ident(NEW.login) || ' LOGIN ENCRYPTED PASSWORD ' || quote_literal(encode(NEW.password,'base64')) || ';';
     EXECUTE 'GRANT ' || quote_ident(NEW.login) || ' TO cati_manager;';
     RETURN NEW;
 END $$ LANGUAGE plpgsql;
@@ -89,6 +97,9 @@ CREATE TRIGGER create_granting BEFORE INSERT ON granting FOR EACH ROW EXECUTE PR
 
 INSERT INTO project (id, name, description, authority) VALUES ('cati_manager', 'CATI manager', 'Management of users and authorizations for all CATI studies and projects', 'cati_manager');
 INSERT INTO credential (project, id, name, description) VALUES ('cati_manager', 'user_moderator', 'user moderator', 'A user moderator can validate and invalidate user account.');
+GRANT USAGE ON SCHEMA cati_manager TO cati_manager$user_moderator;
+GRANT SELECT ON TABLE cati_manager.identity TO cati_manager$user_moderator;
+GRANT SELECT ON TABLE cati_manager.granting TO cati_manager$user_moderator;
 INSERT INTO credential (project, id, name, description) VALUES ('cati_manager', 'valid_user', 'valid user', 'A user with this credential has been validated by a user moderator. Without this credential, a user cannot do anything.');
 
 -- CREATE FUNCTION create_credential_role() RETURNS trigger AS $$

@@ -1,6 +1,7 @@
 from collections import OrderedDict
 from datetime import date, datetime
 import json
+import base64
 
 import psycopg2
 import psycopg2.extras
@@ -9,24 +10,39 @@ from pyramid.exceptions import NotFound
 
 
 connections = {}
-def connect(database_url, database_user, database_password, target_user):
+def connect(database_url, database_user, database_password):
     global connections
         
-    connection = connections.get((database_url, target_user))
+    connection = connections.get((database_url, database_user))
     if connection is None:
-        connection = psycopg2.connect(database_url, user=database_user, password=database_password)
-        if target_user is not None:
-            connection.cursor().execute('SET ROLE ?;', (target_user,))
-            connection.commit()
-            connections[(database_url, target_user)] = connection
+        connection = psycopg2.connect(database_url, 
+                                      user=database_user, 
+                                      password=database_password)
+        connections[(database_url, database_user)] = connection
     return connection
 
 
-def rconnect(request, user=None):
+def manager_connect(request):
     database_url = request.registry.settings['cati_manager.database']
     database_user = request.registry.settings['cati_manager.database_user']
     database_password = request.registry.settings['cati_manager.database_password']
-    return connect(database_url, database_user, database_password, user)
+    return connect(database_url, database_user, database_password)
+
+
+def user_connect(request):
+    database_url = request.registry.settings['cati_manager.database']
+    database_user = request.authenticated_userid
+    if not database_user:
+        raise PermissionError('One must be logged in to perform this database action')
+    with manager_connect(request) as db:
+        with db.cursor() as cur:
+            cur.execute('SELECT password FROM cati_manager.identity WHERE login=%s', [database_user])
+            if cur.rowcount:
+                database_password = base64.b64encode(cur.fetchone()[0].tobytes()).decode()
+                print('!!!', database_password)
+                return connect(database_url, database_user, database_password)
+            else:
+                raise PermissionError('Unknown user %s' % database_user)
 
 
 def authentication_callback(login, request):
@@ -37,7 +53,7 @@ def authentication_callback(login, request):
     list composed of the user login and the groups it
     belongs to (each group name is added a prefix 'group:').
     '''
-    with rconnect(request) as db:
+    with manager_connect(request) as db:
         with db.cursor() as cur:
             cur.execute('SELECT DISTINCT credential.project, credential.id FROM identity, granting, project, credential WHERE identity.login=%s AND granting.login = identity.login AND credential.id = granting.credential', (login,))
             principals = ['%s_%s' % i for i in cur]
@@ -82,8 +98,8 @@ def table_info(db, schema, table):
                     raise NotFound('No database table or view named "%s"' % table)
     return {'columns': columns}
 
-def table_data(db, schema, table, distinct=False, columns=None, where=None,
-               order_by=None, limit=None, offset=None, as_list=False):
+def table_select(db, schema, table, distinct=False, columns=None, where=None,
+                 order_by=None, limit=None, offset=None, as_dict=False):
     sql = ['SELECT ']
     if distinct:
         sql.append('DISTINCT ')
@@ -100,11 +116,41 @@ def table_data(db, schema, table, distinct=False, columns=None, where=None,
     sql = ''.join(sql)
     
     with db:
-        if not as_list:
+        if as_dict:
             cur = db.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
         else:
             cur = db.cursor()
         with cur:
             cur.execute(sql)
             return cur.fetchall()
-            
+
+def table_insert(db, schema, table, data, columns=None, as_dict=False):
+    with db:
+        if as_dict:
+            cur = db.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+        else:
+            cur = db.cursor()
+        with cur:
+            sql_insert = 'INSERT INTO ' + ('%s.%s ' % (schema, table) if schema else '%s ' % table)
+            for item in data:
+                sql = [sql_insert]
+                if columns:
+                    cols = columns
+                elif isinstance(item, dict):
+                    cols = list(item.keys())
+                else:
+                    cols = None
+                if cols:
+                    sql += ['( ', ','.join(cols), ' )' ]
+                sql.append(' VALUES ( ')
+                if cols:
+                    sql.append(','.join(['%s'] * len(cols)))
+                else:
+                    sql.append(','.join(['%s'] * len(item)))
+                sql.append(' );')
+                sql = ''.join(sql)
+                if isinstance(item, dict):
+                    row_data = [item[i] for i in cols]
+                else:
+                    row_data = item
+                cur.execute(sql, row_data)
