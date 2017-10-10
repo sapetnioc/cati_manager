@@ -1,5 +1,7 @@
 {% extends "layout.jinja2" %}
 
+{%- set dashboard_callbacks = {} -%}
+
 {% block content %}
 <div class="content">
   <h1>{{title}}</h1>
@@ -9,13 +11,22 @@
   Your account is not validated yet. You will receive an email when a moderator take a decision about your registration request.
   {%- else -%}
   {%- for d in dashboards %}
-    {%- import 'data/' + d.item_type + '.jinja2' as data_type -%}
+    {%- import 'data/' + d.item_type + '.jinja2' as data_type with context -%}
     <h2>{{data_type.title()|safe}}</h2>
+    {%- set form_index = loop.index -%}
     {% for item in d['items'] %}
-      {%- set item_id = 'item_' ~ loop.index -%}
+      {%- set item_id = 'item_' ~ form_index ~ '_' ~ loop.index -%}
       {{data_type.item(item, item_id)|safe}}
     {% endfor -%}
   {%- endfor -%}
   {% endif %}
 </div>
 {% endblock content %}
+
+{%- block script %}
+{%- for cls, cbk in dashboard_callbacks.items() %}
+<script>
+{{cbk|safe}}
+</script>
+{% endfor -%}
+{% endblock -%}

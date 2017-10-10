@@ -54,6 +54,7 @@ def main(global_config, **settings):
     config.add_route('test', '/test')
     config.include('.views.database')
     config.include('.views.authentication')
+    config.include('.views.user')
     config.include('.views.dashboard')
     config.scan()
     return config.make_wsgi_app()

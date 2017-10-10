@@ -67,11 +67,11 @@
             </nav>
     </footer>
 
-    <script>
-    (document).ready(function () {
+<!--    <script>
+    $(document).ready(function () {
       $("table").fixedHeaderTable({ footer: true, cloneHeadToFoot: true, fixedColumn: true, height: 300  });
     });
-    </script>
+    </script>-->
 
     <!-- Bootstrap core JavaScript
     ================================================== -->
@@ -79,6 +79,7 @@
     <script src="{{request.static_url('cati_manager:static/js/jquery.min.js')}}"></script>
     <script type="text/javascript" src="{{request.static_url('deform:static/scripts/deform.js')}}"></script>
     <script src="{{request.static_url('cati_manager:static/js/bootstrap.min.js')}}"></script>
+    <script src="{{request.static_url('cati_manager:static/js/cati_manager.js')}}"></script>
     {% block script %}{% endblock -%}
   </body>
 </html>

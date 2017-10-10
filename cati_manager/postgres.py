@@ -39,7 +39,6 @@ def user_connect(request):
             cur.execute('SELECT password FROM cati_manager.identity WHERE login=%s', [database_user])
             if cur.rowcount:
                 database_password = base64.b64encode(cur.fetchone()[0].tobytes()).decode()
-                print('!!!', database_password)
                 return connect(database_url, database_user, database_password)
             else:
                 raise PermissionError('Unknown user %s' % database_user)

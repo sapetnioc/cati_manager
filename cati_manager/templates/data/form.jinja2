@@ -14,7 +14,7 @@
 {% endmacro %}
 
 {%- macro form_item(id, label, column) -%}
-    {%- if column.data_type == 'text' -%}
+    {%- if column.data_type in ('text', 'bytea') -%}
       <div class="form-group" name="{{id}}">
         <label class="col-xs-2 control-label" for="{{id}}">{{label|safe}}:&nbsp;</label>
         <div class="col-xs-10 col-sm-9"><input name="{{id}}" type="{{column.html_type|default('text')}}" class="form-control"></div>
