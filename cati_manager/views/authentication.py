@@ -10,6 +10,7 @@ from pyramid.view import view_config, forbidden_view_config
 from pyramid.security import remember, forget
 from pyramid.httpexceptions import HTTPFound, HTTPNotFound
 
+from cati_manager.authentication import check_password
 from cati_manager.postgres import manager_connect, table_info, table_insert
 
 def includeme(config):
@@ -56,15 +57,10 @@ def login_submission(request):
     came_from = request.params.get('came_from', referrer)
     login = request.params['login']
     password = request.params['password']
-    with manager_connect(request) as db:
-        with db.cursor() as cur:
-            cur.execute('SELECT password FROM cati_manager.identity WHERE login=%s', [login])
-            if cur.rowcount:
-                challenge = cur.fetchone()[0].tobytes()
-                if hashlib.sha256(password.encode('utf-8')+challenge[32:]).digest() == challenge[:32]:
-                    headers = remember(request, login)
-                    return HTTPFound(location=came_from,
-                                        headers=headers)
+    if check_password(login, password, request):
+        headers = remember(request, login)
+        return HTTPFound(location=came_from,
+                          headers=headers)
     return dict(
         message='Invalid user name or password',
         url=request.application_url + '/login',

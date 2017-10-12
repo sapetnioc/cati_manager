@@ -10,38 +10,44 @@ from pyramid.exceptions import NotFound
 
 
 connections = {}
-def connect(database_url, database_user, database_password):
+def connect(host, port, database, user, password):
     global connections
         
-    connection = connections.get((database_url, database_user))
+    connection = connections.get((host, port, database, user))
     if connection is None:
-        connection = psycopg2.connect(database_url, 
-                                      user=database_user, 
-                                      password=database_password)
-        connections[(database_url, database_user)] = connection
+        connection = psycopg2.connect(host=host,
+                                      port=port,
+                                      database=database, 
+                                      user=user, 
+                                      password=password)
+        connections[(host, port, database, user)] = connection
     return connection
 
 
 def manager_connect(request):
-    database_url = request.registry.settings['cati_manager.database']
-    database_user = request.registry.settings['cati_manager.database_user']
-    database_password = request.registry.settings['cati_manager.database_password']
-    return connect(database_url, database_user, database_password)
+    host = request.registry.settings['cati_manager.postgresql_host']
+    port = request.registry.settings.get('cati_manager.postgresql_port')
+    database = request.registry.settings['cati_manager.database']
+    user = request.registry.settings['cati_manager.database_admin']
+    password = request.registry.settings['cati_manager.database_admin_challenge']
+    return connect(host=host, port=port, database=database, user=user, password=password)
 
 
 def user_connect(request):
-    database_url = request.registry.settings['cati_manager.database']
-    database_user = request.authenticated_userid
-    if not database_user:
+    host = request.registry.settings['cati_manager.postgresql_host']
+    port = request.registry.settings.get('cati_manager.postgresql_port')
+    database = request.registry.settings['cati_manager.database']
+    user = request.authenticated_userid
+    if not user:
         raise PermissionError('One must be logged in to perform this database action')
     with manager_connect(request) as db:
         with db.cursor() as cur:
-            cur.execute('SELECT password FROM cati_manager.identity WHERE login=%s', [database_user])
+            cur.execute('SELECT password FROM cati_manager.identity WHERE login=%s', [user])
             if cur.rowcount:
-                database_password = base64.b64encode(cur.fetchone()[0].tobytes()).decode()
-                return connect(database_url, database_user, database_password)
+                password = base64.b64encode(cur.fetchone()[0].tobytes()).decode()
+                return connect(host=host, port=port, database=database, user='cati_manager$' + user, password=password)
             else:
-                raise PermissionError('Unknown user %s' % database_user)
+                raise PermissionError('Unknown user %s' % user)
 
 
 def authentication_callback(login, request):
@@ -54,7 +60,7 @@ def authentication_callback(login, request):
     '''
     with manager_connect(request) as db:
         with db.cursor() as cur:
-            cur.execute('SELECT DISTINCT credential.project, credential.id FROM identity, granting, project, credential WHERE identity.login=%s AND granting.login = identity.login AND credential.id = granting.credential', (login,))
+            cur.execute('SELECT DISTINCT credential.project, credential.id FROM identity, granting, project, credential WHERE identity.login=%s AND granting.login = identity.login AND credential.id = granting.credential', [login])
             principals = ['%s_%s' % i for i in cur]
     return [ login ] + principals
 

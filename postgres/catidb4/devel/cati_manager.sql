@@ -21,7 +21,6 @@ INSERT INTO column_properties VALUES ('identity', 'registration_time', '{"visibl
 INSERT INTO column_properties VALUES ('identity', 'email_verification_time', '{"visible": false}');
 
 INSERT INTO identity ( login, registration_time ) VALUES ( 'cati_manager', now() ); 
-GRANT postgresci TO cati_manager;
 
 CREATE FUNCTION create_identity_role() RETURNS trigger AS $$
 DECLARE
@@ -34,8 +33,7 @@ BEGIN
     salt := substring(random()::text from 2);
     pwd := public.digest(NEW.password || salt, 'sha256');
     NEW.password := pwd || salt;
-    EXECUTE 'CREATE ROLE ' || quote_ident(NEW.login) || ' LOGIN ENCRYPTED PASSWORD ' || quote_literal(encode(NEW.password,'base64')) || ';';
---     EXECUTE 'GRANT ' || quote_ident(NEW.login) || ' TO cati_manager$user_moderator WITH ADMIN OPTION;';
+    EXECUTE 'CREATE ROLE ' || quote_ident('cati_manager$' || NEW.login) || ' LOGIN ENCRYPTED PASSWORD ' || quote_literal(encode(NEW.password,'base64')) || ';';
     RETURN NEW;
 END $$ LANGUAGE plpgsql
 SECURITY DEFINER;
@@ -47,7 +45,7 @@ BEGIN
 --     EXECUTE 'REVOKE ' || quote_ident(OLD.login) || ' FROM cati_manager;';
 --     EXECUTE 'REASSIGN OWNED BY ' || quote_ident(OLD.login) || ' TO CURRENT_USER;';
 --     EXECUTE 'DROP OWNED BY ' || quote_ident(OLD.login) || ';';
-    EXECUTE 'DROP ROLE ' || quote_ident(OLD.login) || ';';
+    EXECUTE 'DROP ROLE ' || quote_ident('cati_manager$' || OLD.login) || ';';
     RETURN OLD;
 END $$ LANGUAGE plpgsql
 SECURITY DEFINER;
@@ -93,7 +91,7 @@ BEGIN
     IF NEW.authorization_time IS NULL THEN
         NEW.authorization_time = now();
     END IF;
-    EXECUTE 'GRANT ' || quote_ident(NEW.project || '$' || NEW.credential) || ' TO ' || quote_ident(NEW.login) || ';';
+    EXECUTE 'GRANT ' || quote_ident(NEW.project || '$' || NEW.credential) || ' TO ' || quote_ident('cati_manager$' || NEW.login) || ';';
     RETURN NEW;
 END $$ LANGUAGE plpgsql
 SECURITY DEFINER;
@@ -130,19 +128,3 @@ GRANT SELECT ON TABLE cati_manager.identity_not_validated TO cati_manager$user_m
 GRANT SELECT ON TABLE cati_manager.identity_email_not_verified TO cati_manager$user_moderator;
 GRANT SELECT, INSERT ON TABLE cati_manager.granting TO cati_manager$user_moderator;
 INSERT INTO credential (project, id, name, description) VALUES ('cati_manager', 'valid_user', 'valid user', 'A user with this credential has been validated by a user moderator. Without this credential, a user cannot do anything.');
-
--- CREATE FUNCTION create_credential_role() RETURNS trigger AS $$
--- BEGIN
---     EXECUTE 'CREATE ROLE ' || quote_ident(NEW.id) || ' NOLOGIN;';
---     RETURN NEW;
--- END $$ LANGUAGE plpgsql;
--- CREATE TRIGGER create_credential_role BEFORE INSERT ON credential FOR EACH ROW EXECUTE PROCEDURE create_credential_role();
--- 
--- CREATE FUNCTION delete_credential_role() RETURNS trigger AS $$
--- BEGIN
---     EXECUTE 'REASSIGN OWNED BY ' || quote_ident(OLD.id) || ' TO CURRENT_USER;';
---     EXECUTE 'DROP OWNED BY ' || quote_ident(OLD.id) || ';';
---     EXECUTE 'DROP ROLE ' || quote_ident(OLD.id) || ';';
---     RETURN OLD;
--- END $$ LANGUAGE plpgsql;
--- CREATE TRIGGER delete_credential_role BEFORE DELETE ON credential FOR EACH ROW EXECUTE PROCEDURE delete_credential_role();
