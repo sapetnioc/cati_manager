@@ -1,5 +1,5 @@
 '''
-To install catidb_manager, TODO
+To install cati_manager, TODO
 '''
 import argparse
 
@@ -11,6 +11,8 @@ import hashlib
 
 import psycopg2
 from psycopg2.extensions import ISOLATION_LEVEL_AUTOCOMMIT
+
+import cati_manager
 
 parser = argparse.ArgumentParser()
 parser.add_argument('config_file', help='*.ini file containing cati_manager application settings')
@@ -131,7 +133,7 @@ dbm = None
 # Connect to cati_manager database
 db = psycopg2.connect(database=database, host=postgresql_host, port=postgresql_port, user=database_admin, password=challenge)
 
-# Check if catidb_manager schema exists in database
+# Check if cati_manager schema exists in database
 cur = db.cursor()
 cur.execute("SELECT COUNT(*) FROM information_schema.schemata WHERE schema_name = 'cati_manager'")
 if not cur.fetchone()[0]:
@@ -141,10 +143,12 @@ if not cur.fetchone()[0]:
             f, e = osp.splitext(__file__)
             sql = open(f + '.sql').read()
             cur.execute(sql)
-            path = '/home/yc176684/git/cati_manager/postgres/catidb_manager'
-            sql = "INSERT INTO cati_manager.schema_project VALUES ('catidb_manager', '%s', '%s');" % (path, ('devel' if options.devel else 'latest'))
+            path = osp.normpath(osp.join(osp.dirname(cati_manager.__file__), '..', 'postgres', 'cati_manager'))
+            if not osp.isdir(path):
+                raise ValueError('%s is not a valid directory')
+            sql = "INSERT INTO cati_manager.schema_project VALUES ('cati_manager', '%s', '%s');" % (path, ('devel' if options.devel else 'latest'))
             cur.execute(sql)
-            sql = "INSERT INTO cati_manager.installed_component VALUES ( 'catidb_manager', 'cati_manager', 'cati_manager' );"
+            sql = "INSERT INTO cati_manager.installed_component VALUES ( 'cati_manager', 'cati_manager', 'cati_manager' );"
             cur.execute(sql)
             if options.data:
                 print('Add test data')
