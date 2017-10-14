@@ -2,6 +2,8 @@ from collections import OrderedDict
 from datetime import date, datetime
 import json
 import base64
+import threading
+import datetime
 
 import psycopg2
 import psycopg2.extras
@@ -9,20 +11,47 @@ import psycopg2.extras
 from pyramid.exceptions import NotFound
 
 
-connections = {}
-def connect(host, port, database, user, password):
-    global connections
-        
-    connection = connections.get((host, port, database, user))
-    if connection is None:
-        connection = psycopg2.connect(host=host,
-                                      port=port,
-                                      database=database, 
-                                      user=user, 
-                                      password=password)
-        connections[(host, port, database, user)] = connection
-    return connection
+class ConnectionPool:
+    def __init__(self):
+        self.connection_cache = {}
+        self.cache_duration = datetime.timedelta(minutes=10)
+        self.lock = threading.Lock()
+        self.timer = None
+    
+    def start_timer(self):
+        self.timer = threading.Timer(30, self.timer_event)
+        self.timer.start()
+    
+    def connect(self, host, port, database, user, password):
+        with self.lock:        
+            cache = self.connection_cache.get((host, port, database, user))
+            if cache is None:
+                connection = psycopg2.connect(host=host,
+                                            port=port,
+                                            database=database, 
+                                            user=user, 
+                                            password=password)
+            else:
+                connection = cache[0]
+            self.connection_cache[(host, port, database, user)] = (connection, datetime.datetime.now())
+            if self.timer is None:
+                self.start_timer()
+        return connection
 
+    def timer_event(self):
+        with self.lock:
+            for k, cache in list(self.connection_cache.items()):
+                connection, last_used = cache
+                if (datetime.datetime.now() - last_used) > self.cache_duration:
+                    connection.close()
+                if connection.closed:
+                    del self.connection_cache[k]
+            if self.connection_cache:
+                self.start_timer()
+            else:
+                self.timer = None
+    
+pool = ConnectionPool()
 
 def manager_connect(request):
     host = request.registry.settings['cati_manager.postgresql_host']
@@ -30,7 +59,7 @@ def manager_connect(request):
     database = request.registry.settings['cati_manager.database']
     user = request.registry.settings['cati_manager.database_admin']
     password = request.registry.settings['cati_manager.database_admin_challenge']
-    return connect(host=host, port=port, database=database, user=user, password=password)
+    return pool.connect(host=host, port=port, database=database, user=user, password=password)
 
 
 def user_connect(request):
@@ -45,18 +74,17 @@ def user_connect(request):
             cur.execute('SELECT password FROM cati_manager.identity WHERE login=%s', [user])
             if cur.rowcount:
                 password = base64.b64encode(cur.fetchone()[0].tobytes()).decode()
-                return connect(host=host, port=port, database=database, user='cati_manager$' + user, password=password)
+                return pool.connect(host=host, port=port, database=database, user='cati_manager$' + user, password=password)
             else:
                 raise PermissionError('Unknown user %s' % user)
 
 
 def authentication_callback(login, request):
     '''
-    ldap_authentication_callback can be used as callback for
-    AuthTktAuthenticationPolicy. It checks user password and 
-    returns either None if the user is not authenticated or a
-    list composed of the user login and the groups it
-    belongs to (each group name is added a prefix 'group:').
+    authentication_callback can be used as callback for
+    AuthTktAuthenticationPolicy. It returns a
+    list composed of the user login and the credentials it
+    had been granted.
     '''
     with manager_connect(request) as db:
         with db.cursor() as cur:

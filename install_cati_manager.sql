@@ -4,9 +4,6 @@ CREATE LANGUAGE plpython3u;
 CREATE schema cati_manager;
 SET search_path = cati_manager, public;
 
-
--- POSTGRESCI >>>
-
 CREATE FUNCTION check_python_module()
     RETURNS void
 AS $BODY$
@@ -241,7 +238,6 @@ AS $BODY$
             plpy.execute('SET search_path = %s;' % search_path)
 $BODY$
   LANGUAGE plpython3u;
--- <<< POSTGRESCI
 
 INSERT INTO cati_manager.schema_project VALUES ('catidb4', '/home/yc176684/git/cati_manager/postgres/catidb4', 'devel');
 INSERT INTO cati_manager.installed_component VALUES ( 'catidb4', 'cati_manager', 'cati_manager' );

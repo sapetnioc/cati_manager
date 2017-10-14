@@ -6,6 +6,7 @@ from cati_manager.postgres import (user_connect,
                                    table_info,
                                    table_select,
                                    table_insert)
+from cati_manager.views.maintenance import check_maintenance
 
 
 
@@ -16,6 +17,7 @@ def includeme(config):
 
 @view_config(route_name='table_info', request_method='GET', renderer='json', permission='cati_manager_valid_user')
 def table_info_view(request):
+    check_maintenance(request)
     l = request.matchdict['table'].split('.', 1)
     if len(l) < 2:
         schema = 'current_schema'
@@ -26,6 +28,7 @@ def table_info_view(request):
 
 @view_config(route_name='table_data', request_method='GET', renderer='json2', permission='cati_manager_valid_user')
 def table_data_view(request):
+    check_maintenance(request)
     l = request.matchdict['table'].split('.', 1)
     if len(l) < 2:
         schema = 'current_schema'
@@ -56,6 +59,7 @@ def table_data_view(request):
 
 @view_config(route_name='table_data', request_method='POST', renderer='json2', permission='cati_manager_valid_user')
 def table_data_view(request):
+    check_maintenance(request)
     l = request.matchdict['table'].split('.', 1)
     if len(l) < 2:
         schema = 'current_schema'

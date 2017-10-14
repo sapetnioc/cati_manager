@@ -29,13 +29,18 @@ class PrincipalAuthorizationPolicy:
 def main(global_config, **settings):
     """ This function returns a Pyramid WSGI application.
     """
-    config = Configurator(settings=settings, autocommit=True)
+    config = Configurator(settings=settings)
     config.include('pyramid_jinja2')
+
+    # Make datetime.datetime objects useable in view returning
+    # JSON data. They are automatically converted to an ISO formatted
+    # string.
     json_renderer = JSON()
     def datetime_adapter(obj, request):
         return obj.isoformat()
     json_renderer.add_adapter(datetime.datetime, datetime_adapter)
     config.add_renderer('json2', json_renderer)
+
     authn_policy = AuthTktAuthenticationPolicy('jfldezkjvmezafkjsdqmlfkjd', 
         hashalg='sha512',
         timeout=1200,      # User must reidentify himself after 20 minutes

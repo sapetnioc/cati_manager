@@ -64,6 +64,12 @@ if not database:
     missing_settings.append('''# Name of the PostgreSQL database dedicated to cati_manager.
 cati_manager.database = cati_manager
 ''')
+maintenance_path = config['app:main'].get('cati_manager.maintenance_path')
+if not maintenance_path:
+    print('Maintenance path missing')
+    missing_settings.append('''# Name of the JSON file used to store temporary maintenance information
+cati_manager.maintenance_path = ~/.config/cati/cati_manager_maintenance.json
+''')
 if missing_settings:
     print('\nAdd the following settings to the [app:main] section of %s:\n' % options.config_file)
     print('\n'.join(missing_settings))

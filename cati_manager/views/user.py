@@ -3,6 +3,7 @@ from __future__ import absolute_import
 from pyramid.view import view_config
 
 from cati_manager.postgres import user_connect
+from cati_manager.views.maintenance import check_maintenance
 
 def includeme(config):
     config.add_route('user', '/user/{login}')
@@ -10,6 +11,7 @@ def includeme(config):
 @view_config(route_name='user', request_method='DELETE', renderer='templates/layout.jinja2',
              permission='cati_manager_user_moderator')
 def delete_user(request):
+    check_maintenance(request)
     login = request.matchdict['login']
     with user_connect(request) as db:
         with db.cursor() as cur:
@@ -21,6 +23,7 @@ def delete_user(request):
 @view_config(route_name='user', request_method='PUT', renderer='templates/layout.jinja2',
              permission='cati_manager_user_moderator')
 def validate_user(request):
+    check_maintenance(request)
     login = request.matchdict['login']
     with user_connect(request) as db:
         with db.cursor() as cur:

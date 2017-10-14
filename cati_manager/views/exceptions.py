@@ -6,6 +6,9 @@ import psycopg2
 from pyramid.view import view_config
 from pyramid.httpexceptions import HTTPClientError, HTTPServerError
 
+from cati_manager.views.maintenance import MaintenanceError
+
+
 @view_config(context=Exception, renderer='templates/exceptions.jinja2')
 def uncaught_exception(exc, request):
     request.response.status = 500 # Internal server error
@@ -32,6 +35,14 @@ def database_exception(exc, request):
     request.response.status = 500 # Internal server error
     result = uncaught_exception(exc, request)
     result['error_type'] = 'Database error'
-    if exc.cursor and exc.cursor.query:
-        result['technical_messages'].insert(0, '<strong>SQL Query:</strong><br>%s' % exc.cursor.query.decode())
+    if exc.cursor:
+        if exc.cursor.query:
+            result['technical_messages'].insert(0, '<strong>SQL Query:</strong><br>%s' % exc.cursor.query.decode())
     return result
+
+@view_config(context=MaintenanceError, renderer='templates/exceptions.jinja2')
+def maintenance(exc, request):
+    request.response.status = 503 # Service Unavailable
+    return {'error_type': 'Server maintenance',
+            'error_messages': [html.escape(str(exc)).replace('\n','<br>')],}
+#            'technical_messages': ['\n'.join(traceback.format_exception(exc.__class__,exc,exc.__traceback__))]}

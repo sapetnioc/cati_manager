@@ -12,6 +12,7 @@ from pyramid.httpexceptions import HTTPFound, HTTPNotFound
 
 from cati_manager.authentication import check_password
 from cati_manager.postgres import manager_connect, table_info, table_insert
+from cati_manager.views.maintenance import check_maintenance
 
 def includeme(config):
     config.add_route('login', '/login')
@@ -49,6 +50,7 @@ def login(request):
 
 @view_config(route_name='login', request_method='POST', renderer='templates/login.jinja2')
 def login_submission(request):
+    check_maintenance(request)
     login_url = request.route_url('login')
     referrer = request.url
      # Don't use login form itself as came_from (we redirect to application url)
@@ -77,6 +79,7 @@ def logout(request):
 
 @view_config(route_name='register', request_method='GET', renderer='templates/database_form.jinja2')
 def registration_form(request):
+    check_maintenance()
     return {
         'data_type': 'registration',
         'db_info': table_info(manager_connect(request), 'cati_manager', 'identity'),
@@ -85,6 +88,7 @@ def registration_form(request):
 
 @view_config(route_name='register', request_method='POST', renderer='json')
 def registration_validation(request):
+    check_maintenance()
     errors = {}
     login = request.params['login']
     with manager_connect(request) as db:
@@ -109,6 +113,7 @@ def registration_validation(request):
 
 @view_config(route_name='email_validation', request_method='GET', renderer='templates/layout.jinja2')
 def email_validation(request):
+    check_maintenance()
     login = request.matchdict['login']
     secret = request.matchdict['secret']
     with manager_connect(request) as db:
