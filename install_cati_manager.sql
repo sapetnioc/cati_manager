@@ -238,6 +238,3 @@ AS $BODY$
             plpy.execute('SET search_path = %s;' % search_path)
 $BODY$
   LANGUAGE plpython3u;
-
-INSERT INTO cati_manager.schema_project VALUES ('catidb4', '/home/yc176684/git/cati_manager/postgres/catidb4', 'devel');
-INSERT INTO cati_manager.installed_component VALUES ( 'catidb4', 'cati_manager', 'cati_manager' );

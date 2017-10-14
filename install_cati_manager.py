@@ -16,6 +16,7 @@ parser = argparse.ArgumentParser()
 parser.add_argument('config_file', help='*.ini file containing cati_manager application settings')
 parser.add_argument('--erase-database-and-roles', help='Drop (i.e. delete) the database defined in the configuration file as well as all roles (i.e. users and groups) whose name contains a $ sign', action='store_true')
 parser.add_argument('-d', '--data', help='Insert test data into database', action='store_true')
+parser.add_argument('--devel', help='Use developement version of database schema templates', action='store_true')
 options = parser.parse_args()
 
 config = configparser.ConfigParser()
@@ -139,6 +140,11 @@ if not cur.fetchone()[0]:
             print('Database initialization')
             f, e = osp.splitext(__file__)
             sql = open(f + '.sql').read()
+            cur.execute(sql)
+            path = '/home/yc176684/git/cati_manager/postgres/catidb_manager'
+            sql = "INSERT INTO cati_manager.schema_project VALUES ('catidb_manager', '%s', '%s');" % (path, ('devel' if options.devel else 'latest'))
+            cur.execute(sql)
+            sql = "INSERT INTO cati_manager.installed_component VALUES ( 'catidb_manager', 'cati_manager', 'cati_manager' );"
             cur.execute(sql)
             if options.data:
                 print('Add test data')
