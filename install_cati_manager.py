@@ -15,6 +15,7 @@ from psycopg2.extensions import ISOLATION_LEVEL_AUTOCOMMIT
 parser = argparse.ArgumentParser()
 parser.add_argument('config_file', help='*.ini file containing cati_manager application settings')
 parser.add_argument('--erase-database-and-roles', help='Drop (i.e. delete) the database defined in the configuration file as well as all roles (i.e. users and groups) whose name contains a $ sign', action='store_true')
+parser.add_argument('-d', '--data', help='Insert test data into database', action='store_true')
 options = parser.parse_args()
 
 config = configparser.ConfigParser()
@@ -133,9 +134,13 @@ db = psycopg2.connect(database=database, host=postgresql_host, port=postgresql_p
 cur = db.cursor()
 cur.execute("SELECT COUNT(*) FROM information_schema.schemata WHERE schema_name = 'cati_manager'")
 if not cur.fetchone()[0]:
-    print('Database initialization')
-    f, e = osp.splitext(__file__)
-    sql = open(f + '.sql').read()
     with db:
         with cur:
+            print('Database initialization')
+            f, e = osp.splitext(__file__)
+            sql = open(f + '.sql').read()
             cur.execute(sql)
+            if options.data:
+                print('Add test data')
+                sql = open(f + '_test_data.sql').read()
+                cur.execute(sql)

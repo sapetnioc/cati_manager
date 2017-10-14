@@ -241,29 +241,3 @@ $BODY$
 
 INSERT INTO cati_manager.schema_project VALUES ('catidb4', '/home/yc176684/git/cati_manager/postgres/catidb4', 'devel');
 INSERT INTO cati_manager.installed_component VALUES ( 'catidb4', 'cati_manager', 'cati_manager' );
-
-INSERT INTO cati_manager.identity (login, password, email, first_name, last_name) 
-    VALUES ('just_registered', 'just_registered', 'just_registered@cati-neuroimaging.com', 'Just', 'Registered');
-INSERT INTO cati_manager.identity (login, password, email, first_name, last_name) 
-    VALUES ('just_registered2', 'just_registered2', 'just_registered2@cati-neuroimaging.com', 'Just', 'Registered2');
-
-INSERT INTO cati_manager.identity (login, password, email, email_verification_time, first_name, last_name) 
-    VALUES ('email_verified', 'email_verified', 'email_verified@cati-neuroimaging.com', now(), 'Email', 'Verified');
-INSERT INTO cati_manager.identity (login, password, email, email_verification_time, first_name, last_name) 
-    VALUES ('email_verified2', 'email_verified2', 'email_verified2@cati-neuroimaging.com', now(), 'Email', 'Verified2');
-
-INSERT INTO cati_manager.identity (login, password, email, email_verification_time, first_name, last_name) 
-    VALUES ('valid', 'valid', 'valid_user@cati-neuroimaging.com', now(), 'Valid', 'User');
-INSERT INTO cati_manager.granting (project, credential, login) VALUES ('cati_manager', 'valid_user', 'valid');
-
-
-INSERT INTO cati_manager.identity (login, password, email, email_verification_time, first_name, last_name) 
-    VALUES ('usermod', 'usermod', 'user_moderator@cati-neuroimaging.com', now(), 'User', 'Moderator');
-INSERT INTO cati_manager.granting (project, credential, login) VALUES ('cati_manager', 'valid_user', 'usermod');
-INSERT INTO cati_manager.granting (project, credential, login) VALUES ('cati_manager', 'user_moderator', 'usermod');
-
-
--- INSERT INTO cati_manager.identity VALUES ('test', 'md593b5029edd167b4c36f8d9d4f409c56b', 'test@test.com');
--- INSERT INTO cati_manager.project VALUES ('test_project', 'A test project');
--- INSERT INTO cati_manager.credential VALUES('test_project', 'credential');
--- INSERT INTO cati_manager.granting VALUES('test_project', 'credential', 'test');
