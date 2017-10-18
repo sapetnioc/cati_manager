@@ -3,7 +3,7 @@ from __future__ import absolute_import
 from pyramid.view import view_config
 
 from cati_manager.postgres import manager_connect, table_select
-from cati_manager.views.maintenance import check_maintenance
+from cati_manager.views.admin import check_maintenance
 
 
 @view_config(route_name='test', renderer='templates/test.jinja2')

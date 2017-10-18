@@ -121,6 +121,7 @@ CREATE VIEW identity_not_validated AS
 
 
 INSERT INTO project (id, name, description, authority) VALUES ('cati_manager', 'CATI manager', 'Management of users and authorizations for all CATI studies and projects', 'cati_manager');
+INSERT INTO credential (project, id, name, description) VALUES ('cati_manager', 'server_admin', 'server administrator', 'A server administrator can put the server in maintenane mode and update the database schema and the software.');
 INSERT INTO credential (project, id, name, description) VALUES ('cati_manager', 'user_moderator', 'user moderator', 'A user moderator can validate and invalidate user account.');
 GRANT USAGE ON SCHEMA cati_manager TO cati_manager$user_moderator;
 GRANT SELECT, UPDATE, DELETE ON TABLE cati_manager.identity TO cati_manager$user_moderator;

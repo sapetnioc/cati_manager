@@ -4,7 +4,7 @@ from pyramid.view import view_config
 from pyramid.security import Authenticated
 from pyramid.httpexceptions import HTTPFound
 
-from cati_manager.views.maintenance import check_maintenance
+from cati_manager.views.admin import check_maintenance
 
 @view_config(route_name='home', renderer='templates/home.jinja2')
 def home_anonymous(request):

@@ -3,7 +3,7 @@ from __future__ import absolute_import
 from pyramid.view import view_config
 
 from cati_manager.postgres import user_connect, table_select
-from cati_manager.views.maintenance import check_maintenance
+from cati_manager.views.admin import check_maintenance
 
 def includeme(config):
     config.add_route('dashboard', '/dashboard')

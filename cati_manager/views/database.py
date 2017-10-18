@@ -6,7 +6,7 @@ from cati_manager.postgres import (user_connect,
                                    table_info,
                                    table_select,
                                    table_insert)
-from cati_manager.views.maintenance import check_maintenance
+from cati_manager.views.admin import check_maintenance
 
 
 

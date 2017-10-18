@@ -17,3 +17,9 @@ INSERT INTO cati_manager.identity (login, password, email, email_verification_ti
     VALUES ('usermod', 'usermod', 'user_moderator@cati-neuroimaging.com', now(), 'User', 'Moderator');
 INSERT INTO cati_manager.granting (project, credential, login) VALUES ('cati_manager', 'valid_user', 'usermod');
 INSERT INTO cati_manager.granting (project, credential, login) VALUES ('cati_manager', 'user_moderator', 'usermod');
+
+INSERT INTO cati_manager.identity (login, password, email, email_verification_time, first_name, last_name) 
+    VALUES ('admin', 'admin', 'admin@cati-neuroimaging.com', now(), 'Your', 'Master');
+INSERT INTO cati_manager.granting (project, credential, login) VALUES ('cati_manager', 'valid_user', 'admin');
+INSERT INTO cati_manager.granting (project, credential, login) VALUES ('cati_manager', 'server_admin', 'admin');
+INSERT INTO cati_manager.granting (project, credential, login) VALUES ('cati_manager', 'user_moderator', 'admin');

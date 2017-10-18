@@ -12,7 +12,7 @@ from pyramid.httpexceptions import HTTPFound, HTTPNotFound
 
 from cati_manager.authentication import check_password
 from cati_manager.postgres import manager_connect, table_info, table_insert
-from cati_manager.views.maintenance import check_maintenance
+from cati_manager.views.admin import check_maintenance
 
 def includeme(config):
     config.add_route('login', '/login')
