@@ -8,7 +8,7 @@ import base64
 from pyramid.view import view_config
 import psycopg2.extras
 
-from cati_manager.postgres import manager_connect, table_select
+from cati_manager.postgres import manager_connect, connection_pool
 
 
 class MaintenanceError(Exception):
@@ -51,13 +51,14 @@ def start_maintenance(request):
         maintenance = {
             'message': request.params['message'],
             'maintenance_end': request.params['maintenance_end'],
+            'admins': {},
         }
         with manager_connect(request) as db:
             with db.cursor() as cur:
                 sql = "SELECT i.login, i.password FROM cati_manager.identity i LEFT JOIN cati_manager.granting g ON i.login = g.login WHERE g.project = 'cati_manager' AND g.credential = 'server_admin';"
                 cur.execute(sql)
-                maintenance['admins'] = []
                 for i in cur:
-                    maintenance['admins'].append([i[0], base64.b64encode(i[1]).decode('utf-8')])
+                    maintenance['admins'][i[0]] = base64.b64encode(i[1]).decode('utf-8')
+        connection_pool.close_connections()
         json.dump(maintenance, open(maintenance_path, 'w'))
     return {'maintenance': maintenance}

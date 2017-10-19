@@ -51,7 +51,14 @@ class ConnectionPool:
             else:
                 self.timer = None
     
-pool = ConnectionPool()
+    def close_connections(self):
+        with self.lock:
+            for k, cache in list(self.connection_cache.items()):
+                connection, last_used = cache
+                connection.close()
+            self.connection_cache = {}
+        
+connection_pool = ConnectionPool()
 
 def manager_connect(request):
     host = request.registry.settings['cati_manager.postgresql_host']
@@ -59,7 +66,7 @@ def manager_connect(request):
     database = request.registry.settings['cati_manager.database']
     user = request.registry.settings['cati_manager.database_admin']
     password = request.registry.settings['cati_manager.database_admin_challenge']
-    return pool.connect(host=host, port=port, database=database, user=user, password=password)
+    return connection_pool.connect(host=host, port=port, database=database, user=user, password=password)
 
 
 def user_connect(request):
@@ -74,23 +81,9 @@ def user_connect(request):
             cur.execute('SELECT password FROM cati_manager.identity WHERE login=%s', [user])
             if cur.rowcount:
                 password = base64.b64encode(cur.fetchone()[0].tobytes()).decode()
-                return pool.connect(host=host, port=port, database=database, user='cati_manager$' + user, password=password)
+                return connection_pool.connect(host=host, port=port, database=database, user='cati_manager$' + user, password=password)
             else:
                 raise PermissionError('Unknown user %s' % user)
-
-
-def authentication_callback(login, request):
-    '''
-    authentication_callback can be used as callback for
-    AuthTktAuthenticationPolicy. It returns a
-    list composed of the user login and the credentials it
-    had been granted.
-    '''
-    with manager_connect(request) as db:
-        with db.cursor() as cur:
-            cur.execute('SELECT DISTINCT credential.project, credential.id FROM identity, granting, project, credential WHERE identity.login=%s AND granting.login = identity.login AND credential.id = granting.credential', [login])
-            principals = ['%s_%s' % i for i in cur]
-    return [ login ] + principals
 
 
 def table_info(db, schema, table):

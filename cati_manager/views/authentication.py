@@ -50,7 +50,6 @@ def login(request):
 
 @view_config(route_name='login', request_method='POST', renderer='templates/login.jinja2')
 def login_submission(request):
-    check_maintenance(request)
     login_url = request.route_url('login')
     referrer = request.url
      # Don't use login form itself as came_from (we redirect to application url)

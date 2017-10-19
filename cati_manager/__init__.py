@@ -6,7 +6,7 @@ from pyramid.authorization import ACLAuthorizationPolicy
 from pyramid.session import UnencryptedCookieSessionFactoryConfig
 from pyramid.renderers import JSON
 
-from cati_manager.postgres import authentication_callback
+from cati_manager.authentication import authentication_callback
 
 class PrincipalAuthorizationPolicy:
     def permits(self, context, principals, permission):
