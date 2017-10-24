@@ -9,6 +9,7 @@ import configparser
 from getpass import getpass
 import hashlib
 
+import pgpy
 import psycopg2
 from psycopg2.extensions import ISOLATION_LEVEL_AUTOCOMMIT
 
@@ -62,12 +63,51 @@ cati_manager.database_admin_challenge = %s
     else:
         print('Too many password, mismatch. Installation canceled.')
         sys.exit(1)
+
 database = config['app:main'].get('cati_manager.database')
 if not database:
     print('Database name missing')
     missing_settings.append('''# Name of the PostgreSQL database dedicated to cati_manager.
 cati_manager.database = cati_manager
 ''')
+
+pgp_public_key = config['app:main'].get('cati_manager.pgp_public_key')
+pgp_secret_key = config['app:main'].get('cati_manager.pgp_secret_key')
+if not pgp_public_key:
+    print('Public PGP key missing')
+    missing_settings.append('''# Path to the file containing cati_manager PGP public key.
+# The public and private key files can be generated and exported with gpg.
+# If one needs to generate them in a script, here is an example (the temporary directory 
+# is here to avoid storing the keys in user home directory):
+#   tmp=`mktemp -d`
+#   cat << EOF | gpg2 --batch --gen-key --homedir "$tmp"
+#   %echo Generating cati_manager PGP key
+#   %no-protection
+#   Key-Type: 1
+#   Key-Length: 2048
+#   Name-Real: cati_manager
+#   Name-Comment: no comment
+#   Name-Email: cati_manager@cati-neuroimaging.com
+#   Expire-Date: 0
+#   %commit
+#   %echo done
+#   EOF
+#   gpg2 --homedir "$tmp" --export cati_manager > /path/to/public.key
+#   gpg2 --homedir "$tmp" --export-secret-keys cati_manager > /path/to/secret.key
+#  rm -R "$tmp"
+cati_manager.pgp_public_key = /path/to/public.key
+''')
+if not pgp_secret_key:
+    print('Secret PGP key missing')
+    missing_settings.append('''# Path to the file containing cati_manager PGP secret key.
+cati_manager.pgp_secret_key = /path/to/secret.key
+''')
+    
+if missing_settings:
+    print('\nAdd the following settings to the [app:main] section of %s:\n' % options.config_file)
+    print('\n'.join(missing_settings))
+    sys.exit(1)
+
 maintenance_path = config['app:main'].get('cati_manager.maintenance_path')
 if not maintenance_path:
     print('Maintenance path missing')
@@ -99,6 +139,28 @@ If {0} superuser is not created in PostgreSQL, you can use psql to create it :
   CREATE ROLE {0} WITH SUPERUSER LOGIN PASSWORD '{1}';'''.format(database_admin, challenge))
     sys.exit(1)
 
+# Try to read PGP key files
+try:
+    pgp_public_key = osp.expandvars(pgp_public_key)
+    key, other = pgpy.PGPKey.from_file(pgp_public_key)
+except Exception as e:
+    print(pgp_public_key, 'is not a valid PGP key file. Error message:', e)
+    sys.exit(1)
+if not key.is_public:
+    print(pgp_public_key, 'is not a public key but a secret one.')
+    sys.exit(1)
+pgp_public_key = key
+try:
+    pgp_secret_key = osp.expandvars(pgp_secret_key)
+    key, other = pgpy.PGPKey.from_file(pgp_secret_key)
+except Exception as e:
+    print(pgp_secret_key, 'is not a valid PGP key file. Error message:', e)
+    sys.exit(1)
+if key.is_public:
+    print(pgp_secret_key, 'is not a secret key but a public one.')
+    sys.exit(1)
+pgp_secret_key = key
+
 # Try to connect to cati_manager database
 try:
     db = psycopg2.connect(database=database, host=postgresql_host, port=postgresql_port, user=database_admin, password=challenge)
@@ -109,6 +171,8 @@ except psycopg2.OperationalError as error:
         db = None
     else:
         raise
+
+print('Configuration is clean')
 
 if options.erase_database_and_roles:
     if db:
@@ -127,6 +191,8 @@ if db is None:
     print('Creating database', database)
     dbm.set_isolation_level(ISOLATION_LEVEL_AUTOCOMMIT)
     dbm.cursor().execute('CREATE DATABASE %s;' % database)
+else:
+    print('Database %s already exists.' % database) 
 
 # Close connection on postgres database
 dbm = None
@@ -150,6 +216,8 @@ if not cur.fetchone()[0]:
             cur.execute(sql)
             sql = "INSERT INTO cati_manager.installed_component VALUES ( 'cati_manager', 'cati_manager', 'cati_manager' );"
             cur.execute(sql)
+            sql = "INSERT INTO cati_manager.pgp_public_keys (name, pgp_key) VALUES ('cati_manager', %s);"
+            cur.execute(sql, [bytes(pgp_public_key)])
             if options.data:
                 print('Add test data')
                 sql = open(f + '_test_data.sql').read()

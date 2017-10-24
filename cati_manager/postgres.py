@@ -70,20 +70,18 @@ def manager_connect(request):
 
 
 def user_connect(request):
+    from cati_manager.authentication import get_user_password
+    
     host = request.registry.settings['cati_manager.postgresql_host']
     port = request.registry.settings.get('cati_manager.postgresql_port')
     database = request.registry.settings['cati_manager.database']
     user = request.authenticated_userid
     if not user:
         raise PermissionError('One must be logged in to perform this database action')
-    with manager_connect(request) as db:
-        with db.cursor() as cur:
-            cur.execute('SELECT password FROM cati_manager.identity WHERE login=%s', [user])
-            if cur.rowcount:
-                password = base64.b64encode(cur.fetchone()[0].tobytes()).decode()
-                return connection_pool.connect(host=host, port=port, database=database, user='cati_manager$' + user, password=password)
-            else:
-                raise PermissionError('Unknown user %s' % user)
+    password= get_user_password(request, user)
+    if password is None:
+        raise PermissionError('Cannot find password for user %s' % user)
+    return connection_pool.connect(host=host, port=port, database=database, user='cati_manager$' + user, password=password)
 
 
 def table_info(db, schema, table):

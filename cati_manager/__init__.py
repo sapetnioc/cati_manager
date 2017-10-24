@@ -1,4 +1,5 @@
 import datetime
+import warnings
 
 from pyramid.config import Configurator
 from pyramid.authentication import AuthTktAuthenticationPolicy
@@ -60,4 +61,9 @@ def main(global_config, **settings):
     config.include('.views.admin')
     config.add_route('test', '/test')
     config.scan()
+    
+    # pgpy emit warnings that can be ignored
+    # I do not know how to select warnings to ignore.
+    warnings.filterwarnings('ignore')
+    
     return config.make_wsgi_app()

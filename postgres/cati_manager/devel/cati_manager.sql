@@ -22,18 +22,22 @@ INSERT INTO column_properties VALUES ('identity', 'email_verification_time', '{"
 
 INSERT INTO identity ( login, registration_time ) VALUES ( 'cati_manager', now() ); 
 
+CREATE TABLE pgp_public_keys ( name VARCHAR NOT NULL PRIMARY KEY, pgp_key BYTEA );
+
 CREATE FUNCTION create_identity_role() RETURNS trigger AS $$
 DECLARE
     salt BYTEA;
     pwd BYTEA;
+    key_var BYTEA;
 BEGIN
     IF NEW.registration_time IS NULL THEN
         NEW.registration_time = now();
     END IF;
-    salt := substring(random()::text from 2);
-    pwd := public.digest(NEW.password || salt, 'sha256');
-    NEW.password := pwd || salt;
-    EXECUTE 'CREATE ROLE ' || quote_ident('cati_manager$' || NEW.login) || ' LOGIN ENCRYPTED PASSWORD ' || quote_literal(encode(NEW.password,'base64')) || ';';
+    SELECT pgp_key FROM pgp_public_keys INTO STRICT key_var WHERE name = 'cati_manager';
+    salt := substring(public.gen_salt('bf'),8);
+    pwd := NEW.password;
+    NEW.password := pgp_pub_encrypt_bytea(NEW.password || salt, key_var);
+    EXECUTE 'CREATE ROLE ' || quote_ident('cati_manager$' || NEW.login) || ' LOGIN UNENCRYPTED PASSWORD ' || quote_literal(convert_from(pwd,'UTF8')) || ';';
     RETURN NEW;
 END $$ LANGUAGE plpgsql
 SECURITY DEFINER;

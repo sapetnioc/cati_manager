@@ -15,6 +15,7 @@ requires = [
     'pyramid_debugtoolbar',
     'waitress',
     'psycopg2',
+    'pgpy',
 ]
 
 tests_require = [
