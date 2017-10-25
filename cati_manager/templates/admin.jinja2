@@ -1,17 +1,17 @@
 {% extends "layout.jinja2" %}
-{% block content %}
+{% block content -%}
 
-{% if error -%}
-<center><font color="red">{{ error|e }}</font></color><br/>
-{%- endif %}
-{% if database_connections %}
-{% for cnx in database_connections %}
+<h1>Administration page</h1>
+
+<h2>Maintenance</h2>
+{% if database_connections -%}
+{%- for cnx in database_connections -%}
 <p>User <strong>{{cnx.login}}</strong> connected since {{cnx.backend_start.isoformat(' ')}}</p>
-{% endfor %}
-{% endif %}
+{%- endfor %}
+{%- endif %}
 
-<form class="form-horizontal" action="{{ url }}" method="post">
-{% if maintenance %}
+<form class="form-horizontal" action="/maintenance" method="post">
+{% if maintenance -%}
 Maintenance activated until {{maintenance.maintenance_end}}.
 Message : "{{maintenance.message}}"
 <div class="form-group">
@@ -19,7 +19,7 @@ Message : "{{maintenance.message}}"
         <button type="submit" class="btn btn-success">Stop maintenance</button>
     </div>
 </div>
-{% else %}
+{%- else -%}
     <div class="form-group">
         <label class="col-xs-2 control-label" for="message">Message:&nbsp;</label>
         <div class="col-xs-10 col-sm-9">
@@ -41,8 +41,9 @@ Message : "{{maintenance.message}}"
         </div>
     </div>
 </form>
-{% endif %}
-{% endblock content %}
+{%- endif %}
+
+{%- endblock content %}
 {% block script %}
 <script type="text/javascript">
     $('#maintenance_end').datepicker({dateFormat: "yy-mm-dd"});

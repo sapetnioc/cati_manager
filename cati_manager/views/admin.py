@@ -6,6 +6,7 @@ import json
 import base64
 
 from pyramid.view import view_config
+from pyramid.httpexceptions import HTTPFound
 import psycopg2.extras
 
 from cati_manager.postgres import manager_connect, connection_pool
@@ -16,6 +17,7 @@ class MaintenanceError(Exception):
 
 
 def includeme(config):
+    config.add_route('admin', '/admin')
     config.add_route('maintenance', '/maintenance')
 
 
@@ -25,8 +27,8 @@ def check_maintenance(request):
         raise MaintenanceError('Service is down for maintenance.')
 
 
-@view_config(route_name='maintenance', request_method='GET', renderer='templates/maintenance.jinja2', permission='cati_manager_server_admin')
-def maintenance_status(request):
+@view_config(route_name='admin', request_method='GET', renderer='templates/admin.jinja2', permission='cati_manager_server_admin')
+def admin(request):
     result = { 'maintenance': None }
     maintenance_path = osp.expanduser(request.registry.settings['cati_manager.maintenance_path'])
     if osp.exists(maintenance_path):
@@ -39,14 +41,14 @@ def maintenance_status(request):
                 sql = 'SELECT pid, usename AS login, backend_start, xact_start, query_start, state_change, state, query FROM pg_stat_activity WHERE datname = %s AND usename != %s;'
                 cur.execute(sql, [database, admin])
                 result['database_connections'] = cur.fetchall()
+        
     return result
 
-@view_config(route_name='maintenance', request_method='POST', renderer='templates/maintenance.jinja2', permission='cati_manager_server_admin')
+@view_config(route_name='maintenance', request_method='POST', permission='cati_manager_server_admin')
 def start_maintenance(request):
     maintenance_path = osp.expanduser(request.registry.settings['cati_manager.maintenance_path'])
     if osp.exists(maintenance_path):
         os.remove(maintenance_path)
-        maintenance = None
     else:
         maintenance = {
             'message': request.params['message'],
@@ -61,4 +63,4 @@ def start_maintenance(request):
                     maintenance['admins'][i[0]] = base64.b64encode(i[1]).decode('utf-8')
         connection_pool.close_connections()
         json.dump(maintenance, open(maintenance_path, 'w'))
-    return {'maintenance': maintenance}
+    raise HTTPFound(request.route_url('admin'))

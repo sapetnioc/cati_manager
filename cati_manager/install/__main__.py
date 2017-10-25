@@ -1,5 +1,7 @@
 '''
-To install cati_manager, TODO
+To install cati_manager:
+
+    <venv>/bin/python -m cati_manager.install [options] <pyramid_config_file>.ini
 '''
 import argparse
 
@@ -13,7 +15,7 @@ import pgpy
 import psycopg2
 from psycopg2.extensions import ISOLATION_LEVEL_AUTOCOMMIT
 
-import cati_manager
+from cati_manager.postgres import sorted_sql_files
 
 parser = argparse.ArgumentParser()
 parser.add_argument('config_file', help='*.ini file containing cati_manager application settings')
@@ -135,8 +137,8 @@ except psycopg2.OperationalError as error:
 if not dbm:
     print('''PostgreSQL authentication failed for {0}
 If {0} superuser is not created in PostgreSQL, you can use psql to create it :
-  sudo -u postgres psql -n
-  CREATE ROLE {0} WITH SUPERUSER LOGIN PASSWORD '{1}';'''.format(database_admin, challenge))
+sudo -u postgres psql -n
+CREATE ROLE {0} WITH SUPERUSER LOGIN PASSWORD '{1}';'''.format(database_admin, challenge))
     sys.exit(1)
 
 # Try to read PGP key files
@@ -203,22 +205,21 @@ db = psycopg2.connect(database=database, host=postgresql_host, port=postgresql_p
 cur = db.cursor()
 cur.execute("SELECT COUNT(*) FROM information_schema.schemata WHERE schema_name = 'cati_manager'")
 if not cur.fetchone()[0]:
+    print('Database initialization')
     with db:
-        with cur:
-            print('Database initialization')
-            f, e = osp.splitext(__file__)
-            sql = open(f + '.sql').read()
-            cur.execute(sql)
-            path = osp.normpath(osp.join(osp.dirname(cati_manager.__file__), '..', 'postgres', 'cati_manager'))
-            if not osp.isdir(path):
-                raise ValueError('%s is not a valid directory')
-            sql = "INSERT INTO cati_manager.schema_project VALUES ('cati_manager', '%s', '%s');" % (path, ('devel' if options.devel else 'latest'))
-            cur.execute(sql)
-            sql = "INSERT INTO cati_manager.installed_component VALUES ( 'cati_manager', 'cati_manager', 'cati_manager' );"
-            cur.execute(sql)
+        with db.cursor() as cur:
+            cur.execute('CREATE SCHEMA cati_manager;'
+                        'CREATE TABLE cati_manager.installed_sql (path VARCHAR NOT NULL PRIMARY KEY, md5 VARCHAR);')
+            this_dir = osp.dirname(__file__)
+            for f in sorted_sql_files(this_dir):
+                sql = open(f, 'rb').read()
+                cur.execute(sql.decode('UTF8'))
+                cur.execute('INSERT INTO cati_manager.installed_sql (path, md5) VALUES (%s, %s);', [f, hashlib.md5(sql).hexdigest()])
             sql = "INSERT INTO cati_manager.pgp_public_keys (name, pgp_key) VALUES ('cati_manager', %s);"
             cur.execute(sql, [bytes(pgp_public_key)])
             if options.data:
                 print('Add test data')
-                sql = open(f + '_test_data.sql').read()
+                sql = open(osp.join(this_dir, 'sample_data', 'test.sql')).read()
                 cur.execute(sql)
+else:
+    print('Schema cati_manager already exists in %s. Database installation canceled.' % database) 

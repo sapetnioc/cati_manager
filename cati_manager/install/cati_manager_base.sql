@@ -1,3 +1,8 @@
+CREATE EXTENSION pgcrypto;
+CREATE LANGUAGE plpython3u;
+
+SET search_path = cati_manager, public;
+
 CREATE TABLE column_properties (
     table_name TEXT NOT NULL,
     column_name TEXT NOT NULL,
@@ -34,7 +39,7 @@ BEGIN
         NEW.registration_time = now();
     END IF;
     SELECT pgp_key FROM pgp_public_keys INTO STRICT key_var WHERE name = 'cati_manager';
-    salt := substring(public.gen_salt('bf'),8);
+    salt := substring(gen_salt('bf'),8);
     pwd := NEW.password;
     NEW.password := pgp_pub_encrypt_bytea(NEW.password || salt, key_var);
     EXECUTE 'CREATE ROLE ' || quote_ident('cati_manager$' || NEW.login) || ' LOGIN UNENCRYPTED PASSWORD ' || quote_literal(convert_from(pwd,'UTF8')) || ';';

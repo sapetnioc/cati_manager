@@ -62,6 +62,8 @@ def main(global_config, **settings):
     config.add_route('test', '/test')
     config.scan()
     
+    print(settings['cati_manager.modules'].split('\n'))
+    
     # pgpy emit warnings that can be ignored
     # I do not know how to select warnings to ignore.
     warnings.filterwarnings('ignore')

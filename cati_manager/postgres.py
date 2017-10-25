@@ -1,3 +1,5 @@
+import os
+import os.path as osp
 from collections import OrderedDict
 from datetime import date, datetime
 import json
@@ -9,6 +11,26 @@ import psycopg2
 import psycopg2.extras
 
 from pyramid.exceptions import NotFound
+
+
+def sorted_sql_files(path):
+    result = []
+    todo = []
+    for i in sorted(os.listdir(path)):
+        if i.endswith('.sql'):
+            l = open(osp.join(path, i)).readline()
+            if l.startswith('-- after '):
+                before = l.split(None,2)[2].strip()
+                todo.append((before, i))
+            else:
+                result.append(osp.join(path,i))
+    for before, after in todo:
+        try:
+            i = result.index(before)+1
+            result.insert(i, after)
+        except ValueError:
+            result.append(osp.join(path,after))
+    return result
 
 
 class ConnectionPool:
