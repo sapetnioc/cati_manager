@@ -6,32 +6,60 @@ import json
 import base64
 import threading
 import datetime
+import importlib
+import glob
+import hashlib
 
 import psycopg2
 import psycopg2.extras
+import yaml
 
 from pyramid.exceptions import NotFound
 
 
-def sorted_sql_files(path):
-    result = []
-    todo = []
-    for i in sorted(os.listdir(path)):
-        if i.endswith('.sql'):
-            l = open(osp.join(path, i)).readline()
-            if l.startswith('-- after '):
-                before = l.split(None,2)[2].strip()
-                todo.append((before, i))
-            else:
-                result.append(osp.join(path,i))
-    for before, after in todo:
-        try:
-            i = result.index(before)+1
-            result.insert(i, after)
-        except ValueError:
-            result.append(osp.join(path,after))
-    return result
+def sql_changesets(module):
+    basedir = osp.dirname(importlib.import_module(module).__file__)
+    for sqlyaml in  glob.iglob(osp.join(basedir, '**', '*.sql.yaml'), 
+                               recursive=True):
+        ids = set()
+        file_content = yaml.load(open(sqlyaml))
+        for changeset in file_content['changesets']:
+            id = changeset['id']
+            sql = changeset['sql']
+            if id in ids:
+                raise ValueError('In file %s, two changesets with the same id "%s"' % (sqlyaml, id))
+            ids.add(id)
+            yield (id, sql)
 
+
+def install_sql_changesets(db, schema, module):
+    with db:
+        with db.cursor() as cur:
+            # Create schema if necessry
+            cur.execute("SELECT COUNT(*) FROM information_schema.schemata WHERE schema_name = %s", [schema])
+            if not cur.fetchone()[0]:
+                cur.execute('CREATE SCHEMA %s;' % schema)
+            
+            # Create changeset table if necessary
+            sql = "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = %s AND table_name = %s;"
+            cur.execute(sql, [schema, 'sql_changeset'])
+            if not cur.fetchone()[0]:
+                cur.execute('CREATE TABLE %s.sql_changeset (module VARCHAR NOT NULL, id VARCHAR NOT NULL, md5 VARCHAR, PRIMARY KEY (module, id));' % schema)
+                
+            # Check if module is already installed in schema
+            cur.execute('SELECT COUNT(*) FROM %s.sql_changeset WHERE module = %%s;' % schema, [module])
+            if cur.fetchone()[0]:
+                raise ValueError('SQL changesets from module %s are already installed in schema %s' % (module, schema))
+            
+            # Install sql_changesets
+            no_changeset = True
+            for id, sql in sql_changesets(module):
+                no_changeset = False
+                cur.execute(sql)
+                sql = "INSERT INTO %s.sql_changeset (module, id, md5) VALUES (%%s, %%s, %%s);" % schema
+                cur.execute(sql, [module, id, hashlib.md5(sql.encode('UTF8')).hexdigest()])
+            if no_changeset:
+                raise ValueError('No sql changeset foun in module %s' % module)
 
 class ConnectionPool:
     def __init__(self):

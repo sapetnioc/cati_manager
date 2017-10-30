@@ -16,6 +16,7 @@ requires = [
     'waitress',
     'psycopg2',
     'pgpy',
+    'pyyaml',
 ]
 
 tests_require = [

@@ -15,7 +15,7 @@ import pgpy
 import psycopg2
 from psycopg2.extensions import ISOLATION_LEVEL_AUTOCOMMIT
 
-from cati_manager.postgres import sorted_sql_files
+from cati_manager.postgres import install_sql_changesets
 
 parser = argparse.ArgumentParser()
 parser.add_argument('config_file', help='*.ini file containing cati_manager application settings')
@@ -206,19 +206,14 @@ cur = db.cursor()
 cur.execute("SELECT COUNT(*) FROM information_schema.schemata WHERE schema_name = 'cati_manager'")
 if not cur.fetchone()[0]:
     print('Database initialization')
+    install_sql_changesets(db, 'cati_manager', 'cati_manager.install')
     with db:
         with db.cursor() as cur:
-            cur.execute('CREATE SCHEMA cati_manager;'
-                        'CREATE TABLE cati_manager.installed_sql (path VARCHAR NOT NULL PRIMARY KEY, md5 VARCHAR);')
-            this_dir = osp.dirname(__file__)
-            for f in sorted_sql_files(this_dir):
-                sql = open(f, 'rb').read()
-                cur.execute(sql.decode('UTF8'))
-                cur.execute('INSERT INTO cati_manager.installed_sql (path, md5) VALUES (%s, %s);', [f, hashlib.md5(sql).hexdigest()])
             sql = "INSERT INTO cati_manager.pgp_public_keys (name, pgp_key) VALUES ('cati_manager', %s);"
             cur.execute(sql, [bytes(pgp_public_key)])
             if options.data:
                 print('Add test data')
+                this_dir = osp.dirname(__file__)
                 sql = open(osp.join(this_dir, 'sample_data', 'test.sql')).read()
                 cur.execute(sql)
 else:
