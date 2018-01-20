@@ -87,7 +87,7 @@ def registration_form(request):
 
 @view_config(route_name='register', request_method='POST', renderer='json')
 def registration_validation(request):
-    check_maintenance()
+    check_maintenance(request)
     errors = {}
     login = request.params['login']
     with manager_connect(request) as db:
@@ -112,7 +112,7 @@ def registration_validation(request):
 
 @view_config(route_name='email_validation', request_method='GET', renderer='templates/layout.jinja2')
 def email_validation(request):
-    check_maintenance()
+    check_maintenance(request)
     login = request.matchdict['login']
     secret = request.matchdict['secret']
     with manager_connect(request) as db:
