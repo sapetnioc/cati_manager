@@ -18,9 +18,20 @@ from pyramid.exceptions import NotFound
 
 
 def sql_changesets(module):
+    '''
+    Find all the SQL changesets defined in a given module. The module must be
+    a Python package (i.e. a directory). The changesets are define in any 
+    *.sql.yaml files defined in the module (recursive search). An *.sql.yaml
+    file must contains a dictionary with the following items:
+      changesets: a list of dictionaries containing two items :
+                  'id' is an identifier that must be unique among all the
+                  identifier of the module.
+                  'sql' is the SQL code that is executed to apply the
+                  changeset.
+    '''
     basedir = osp.dirname(importlib.import_module(module).__file__)
-    for sqlyaml in  glob.iglob(osp.join(basedir, '**', '*.sql.yaml'), 
-                               recursive=True):
+    for sqlyaml in  sorted(glob.iglob(osp.join(basedir, '**', '*.sql.yaml'), 
+                                      recursive=True)):
         ids = set()
         file_content = yaml.load(open(sqlyaml))
         for changeset in file_content['changesets']:
@@ -33,6 +44,10 @@ def sql_changesets(module):
 
 
 def install_sql_changesets(db, schema, module):
+    '''
+    Apply all changesets defined in a module in a Postgres schema. The schema
+    is created if it does not exist.
+    '''
     with db:
         with db.cursor() as cur:
             # Create schema if necessry
@@ -59,7 +74,7 @@ def install_sql_changesets(db, schema, module):
                 sql = "INSERT INTO %s.sql_changeset (module, id, md5) VALUES (%%s, %%s, %%s);" % schema
                 cur.execute(sql, [module, id, hashlib.md5(sql.encode('UTF8')).hexdigest()])
             if no_changeset:
-                raise ValueError('No sql changeset foun in module %s' % module)
+                raise ValueError('No sql changeset found in module %s' % module)
 
 class ConnectionPool:
     def __init__(self):
@@ -135,25 +150,62 @@ def user_connect(request):
 
 
 def table_info(db, schema, table):
-    sql = '''
-        SELECT c.column_name,
-               c.ordinal_position,
-               c.column_default,
-               c.is_nullable,
-               c.data_type,
-               c.character_maximum_length,
-               e.data_type as element_type,
-               f.properties
-        FROM information_schema.columns c LEFT JOIN information_schema.element_types e
-        ON ((c.table_catalog, c.table_schema, c.table_name, 'TABLE', c.dtd_identifier)
-           = (e.object_catalog, e.object_schema, e.object_name, e.object_type, e.collection_type_identifier))
-        LEFT JOIN {0}.column_properties f
-        ON ((c.table_name, c.column_name) = (f.table_name, f.column_name))
-        WHERE c.table_schema = '{0}' AND c.table_name = '{1}'
-        ORDER BY c.ordinal_position;'''.format(schema, table)
+    '''
+    Retrieve information about a Postgres table or view. The result is a
+    dictionary with the following items:
+    columns: a list of dictionaries describing each column with the
+        following items
+        id: name of the column
+        ordinal_position: index of the column in the list (starting to 1 as
+                          in PostgreSQL)
+        column_default:
+        is_nullable:
+        data_type:
+        element_type:
+    '''
     columns = []
     with db:
         with db.cursor() as cur:
+            # First check if schema has column_properties table
+            sql = '''SELECT EXISTS (
+                SELECT 1
+                FROM   information_schema.tables 
+                WHERE  table_schema = '{0}'
+                AND    table_name = 'column_properties'
+            );'''.format(schema)
+            cur.execute(sql)
+            if cur.fetchone()[0]:
+                sql = '''
+                    SELECT c.column_name,
+                        c.ordinal_position,
+                        c.column_default,
+                        c.is_nullable,
+                        c.data_type,
+                        c.character_maximum_length,
+                        e.data_type as element_type,
+                        f.properties
+                    FROM information_schema.columns c LEFT JOIN information_schema.element_types e
+                    ON ((c.table_catalog, c.table_schema, c.table_name, 'TABLE', c.dtd_identifier)
+                    = (e.object_catalog, e.object_schema, e.object_name, e.object_type, e.collection_type_identifier))
+                    LEFT JOIN {0}.column_properties f
+                    ON ((c.table_name, c.column_name) = (f.table_name, f.column_name))
+                    WHERE c.table_schema = '{0}' AND c.table_name = '{1}'
+                    ORDER BY c.ordinal_position;'''.format(schema, table)
+            else:
+                sql = '''
+                    SELECT c.column_name,
+                        c.ordinal_position,
+                        c.column_default,
+                        c.is_nullable,
+                        c.data_type,
+                        c.character_maximum_length,
+                        e.data_type as element_type,
+                        NULL
+                    FROM information_schema.columns c LEFT JOIN information_schema.element_types e
+                    ON ((c.table_catalog, c.table_schema, c.table_name, 'TABLE', c.dtd_identifier)
+                    = (e.object_catalog, e.object_schema, e.object_name, e.object_type, e.collection_type_identifier))
+                    WHERE c.table_schema = '{0}' AND c.table_name = '{1}'
+                    ORDER BY c.ordinal_position;'''.format(schema, table)
             cur.execute(sql)
             names = tuple(i[0] for i in cur.description[:-1])
             for row in cur:
@@ -166,7 +218,7 @@ def table_info(db, schema, table):
             if not columns:
                 sql = '''SELECT count(*) 
                          FROM information_schema.tables AS t 
-                         WHERE t.table_schema = %s AND t.table_name = '%s';''' % (schema, table)
+                         WHERE t.table_schema = '%s' AND t.table_name = '%s';''' % (schema, table)
                 cur.execute(sql)
                 if cur.fetchone()[0] ==  0:
                     raise NotFound('No database table or view named "%s"' % table)
