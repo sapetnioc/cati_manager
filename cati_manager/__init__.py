@@ -59,11 +59,11 @@ def main(global_config, **settings):
     config.include('.views.user')
     config.include('.views.dashboard')
     config.include('.views.admin')
+    config.include('.views.upload')
+    config.include('.views.project')
     config.add_route('test', '/test')
-    config.scan()
-    
-    print(settings['cati_manager.modules'].split('\n'))
-    
+    config.scan('cati_manager.views')
+        
     # pgpy emit warnings that can be ignored
     # I do not know how to select warnings to ignore.
     warnings.filterwarnings('ignore')

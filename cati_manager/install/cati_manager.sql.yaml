@@ -72,11 +72,11 @@ changesets:
         id TEXT PRIMARY KEY NOT NULL, 
         name TEXT,
         description TEXT,
-        authority TEXT REFERENCES identity );
+        authority TEXT REFERENCES identity ON UPDATE CASCADE );
 
         
     CREATE TABLE credential (
-        project TEXT REFERENCES project NOT NULL, 
+        project TEXT  NOT NULL REFERENCES project ON UPDATE CASCADE, 
         id TEXT NOT NULL, 
         name TEXT, 
         description TEXT, 
@@ -93,10 +93,10 @@ changesets:
     CREATE TABLE granting ( 
         project TEXT NOT NULL, 
         credential TEXT NOT NULL,
-        login TEXT REFERENCES identity NOT NULL,
-        authority TEXT REFERENCES identity, 
+        login TEXT NOT NULL REFERENCES identity ON UPDATE CASCADE,
+        authority TEXT REFERENCES identity ON UPDATE CASCADE, 
         authorization_time TIMESTAMP, 
-        FOREIGN KEY (project, credential) REFERENCES credential,
+        FOREIGN KEY (project, credential) REFERENCES credential ON UPDATE CASCADE,
         PRIMARY KEY (project, credential, login) );
 
     CREATE FUNCTION create_granting() RETURNS trigger AS $$
@@ -113,7 +113,7 @@ changesets:
     SECURITY DEFINER;
     REVOKE ALL ON FUNCTION create_granting() FROM PUBLIC;
     CREATE TRIGGER create_granting BEFORE INSERT ON granting FOR EACH ROW EXECUTE PROCEDURE create_granting();
-
+    
     CREATE VIEW identity_email_not_verified AS
         SELECT *, md5(login || 
                         coalesce(first_name,'') || 
@@ -135,12 +135,26 @@ changesets:
                 WHERE g.project = 'cati_manager' AND 
                     g.credential = 'valid_user');
 
-
+    -- This view returns all the projects for which the current_user has at list 
+    -- one credential
+    CREATE VIEW my_projects AS
+        SELECT * FROM project
+        WHERE id IN
+        (SELECT g.project
+         FROM granting g);
+    
     INSERT INTO project (id, name, description, authority) VALUES ('cati_manager', 'CATI manager', 'Management of users and authorizations for all CATI studies and projects', 'cati_manager');
     INSERT INTO credential (project, id, name, description) VALUES ('cati_manager', 'server_admin', 'server administrator', 'A server administrator can put the server in maintenane mode and update the database schema and the software.');
     INSERT INTO credential (project, id, name, description) VALUES ('cati_manager', 'user_moderator', 'user moderator', 'A user moderator can validate and invalidate user accounts.');
-    GRANT USAGE ON SCHEMA cati_manager TO cati_manager$user_moderator;
-    GRANT SELECT, UPDATE, DELETE ON TABLE cati_manager.identity TO cati_manager$user_moderator;
+    GRANT USAGE ON SCHEMA cati_manager TO cati_manager$server_admin, cati_manager$user_moderator;
+    GRANT SELECT, UPDATE, DELETE ON TABLE cati_manager.identity TO cati_manager$server_admin, cati_manager$user_moderator;
+    GRANT SELECT ON TABLE cati_manager.project TO PUBLIC;
+    GRANT SELECT ON TABLE cati_manager.my_projects TO PUBLIC;
+    GRANT SELECT ON TABLE cati_manager.credential TO PUBLIC;
+    GRANT SELECT ON granting TO PUBLIC;
+    ALTER TABLE granting ENABLE ROW LEVEL SECURITY;
+        CREATE POLICY my_grants 
+        ON granting USING (current_user = 'cati_manager$' || login); 
     GRANT SELECT ON TABLE cati_manager.identity_not_validated TO cati_manager$user_moderator;
     GRANT SELECT ON TABLE cati_manager.identity_email_not_verified TO cati_manager$user_moderator;
     GRANT SELECT, INSERT ON TABLE cati_manager.granting TO cati_manager$user_moderator;
@@ -163,6 +177,6 @@ changesets:
         id VARCHAR NOT NULL PRIMARY KEY,
         label VARCHAR,
         description VARCHAR,
-        template VARCHAR REFERENCES study_template,
+        template VARCHAR REFERENCES study_template ON UPDATE CASCADE,
         properties JSONB
     );
