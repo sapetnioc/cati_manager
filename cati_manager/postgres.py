@@ -17,6 +17,7 @@ import yaml
 from pyramid.exceptions import NotFound
 
 
+_changesets_splitter = re.compile(r'\s*--\s*cati_manager\s+changeset\s*:\s*([^\s]*)')
 def sql_changesets(module):
     '''
     Find all the SQL changesets defined in a given module. The module must be
@@ -29,16 +30,20 @@ def sql_changesets(module):
                   'sql' is the SQL code that is executed to apply the
                   changeset.
     '''
+    global _changesets_splitter
     basedir = osp.dirname(importlib.import_module(module).__file__)
-    for sqlyaml in  sorted(glob.iglob(osp.join(basedir, '**', '*.sql.yaml'), 
-                                      recursive=True)):
+    for sql_file in  sorted(glob.iglob(osp.join(basedir, '**', '*.sql'), 
+                                       recursive=True)):
         ids = set()
-        file_content = yaml.load(open(sqlyaml))
-        for changeset in file_content['changesets']:
-            id = changeset['id']
-            sql = changeset['sql']
+        changesets = _changesets_splitter.split(open(sql_file).read())
+        if changesets[0].strip():
+            raise ValueError('File %s does not start with "-- cati_manager changeset:"' % sql_file)
+        del changesets[0]
+        while changesets:
+            id = changesets.pop(0)
+            sql = changesets.pop(0)
             if id in ids:
-                raise ValueError('In file %s, two changesets with the same id "%s"' % (sqlyaml, id))
+                raise ValueError('In file %s, two changesets with the same id "%s"' % (sql_file, id))
             ids.add(id)
             yield (id, sql)
 

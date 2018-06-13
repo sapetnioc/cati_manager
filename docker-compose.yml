@@ -1,0 +1,24 @@
+version: '2'
+services:
+  cati_postgres:
+    container_name: cati_postgres
+    image: cati_postgres
+    build:
+        context: .
+        dockerfile: Dockerfile-postgres
+    environment:
+      POSTGRES_USER: cati
+      POSTGRES_PASSWORD: cati
+      POSTGRES_DB: cati_manager
+      
+  
+  cati_manager:
+    container_name: cati_manager
+    image: cati_manager
+    build: .
+    ports:
+      - "8080:80"
+    links:
+      - cati_postgres
+    volumes:
+      - ".:/src/cati_manager"

@@ -9,20 +9,15 @@ with open(os.path.join(here, 'CHANGES.txt')) as f:
     CHANGES = f.read()
 
 requires = [
-    'plaster_pastedeploy',
-    'pyramid',
-    'pyramid_jinja2',
-    'pyramid_debugtoolbar',
-    'waitress',
-    'psycopg2',
-    'pgpy',
-    'pyyaml',
+    'flask >= 1.0',
+    'psycopg2-binary >= 2.7',
+    'click >= 5.0',
 ]
 
 tests_require = [
-    'WebTest >= 1.3.1',  # py3 compat
-    'pytest',
-    'pytest-cov',
+    #'WebTest >= 1.3.1',  # py3 compat
+    #'pytest',
+    #'pytest-cov',
 ]
 
 setup(
@@ -39,7 +34,7 @@ setup(
     author='',
     author_email='',
     url='',
-    keywords='web pyramid pylons',
+    keywords='web flask',
     packages=find_packages(),
     include_package_data=True,
     zip_safe=False,
@@ -47,9 +42,9 @@ setup(
         'testing': tests_require,
     },
     install_requires=requires,
-    entry_points={
-        'paste.app_factory': [
-            'main = cati_manager:main',
-        ],
-    },
+    #entry_points={
+        #'paste.app_factory': [
+            #'main = cati_manager:main',
+        #],
+    #},
 )
