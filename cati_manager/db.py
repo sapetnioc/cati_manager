@@ -1,3 +1,6 @@
+import os
+import pwd
+
 from flask import current_app, g
 
 from psycopg2.pool import ThreadedConnectionPool
