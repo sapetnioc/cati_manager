@@ -1,0 +1,22 @@
+BootStrap: localimage
+From: base_system.simg
+    
+%files
+    cati_manager_admin /usr/local/bin
+    
+%apprun new
+    cati_manager_admin new "$@"
+
+    %apphelp new
+    Create a new server instance in the directory /cati_manager/instance.
+    This directory must be bound to a host directory :
+    
+      singularity run -B /somewhere_on_host/instance:/cati_manager/instance -app new
+
+%startscript
+    cd "${APPROOT_pdf_server}/pdf_server"
+    # Use nohup and /dev/null to completely detach server process from terminal
+    nohup npm start > /dev/null 2>&1 < /dev/null &
+
+    
+    
