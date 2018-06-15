@@ -11,23 +11,55 @@ import click
 def cli():
     pass
 
+def check_call(cmd, *args, **kwargs):
+    print('-'*60)
+    print(' '.join("'{0}'".format(i) for i in cmd))
+    print('-'*60)
+    return subprocess.check_call(cmd, *args, **kwargs)
+
 @cli.command()
 @click.argument('directory', type=click.Path(exists=False, file_okay=False))
-def new(directory):    
+def new(directory):
+    directory = osp.normpath(osp.abspath(directory))
     print('Creating new cati_manager instance in', directory)
-    os.mkdir(directory)
     venv = osp.join(directory, 'venv')
-    subprocess.check_call([sys.executable, '-m', 'venv', venv]) 
+    git = osp.join(directory, 'git')
+    log = osp.join(directory, 'log')
+    run = osp.join(directory, 'run')
+    postgresql = osp.join(directory, 'postgresql')
+    
+    os.mkdir(directory)
+    os.mkdir(log)
+    os.mkdir(osp.join(directory, 'run'))
+    
+    check_call([sys.executable, '-m', 'venv', venv]) 
 
+    check_call(['git', 'clone', 'https://github.com/sapetnioc/cati_manager.git', git])
+    check_call(['git', 'checkout', 'flask'], cwd=git)
+    
+    pip = osp.join(venv, 'bin', 'pip')
+    check_call([pip, 'install', 'wheel', 'waitress'])
+    check_call([pip, 'install', '--editable', git])
+                
     env = os.environ.copy()
-    env['PGDATA'] = osp.join(directory, 'postgresl')
-    subprocess.check_call(['pg_ctl', 'initdb'], env=env)
+    env['PGDATA'] = postgresql
+    check_call(['pg_ctl', 'initdb'], env=env)
+    conf_file = osp.join(postgresql, 'postgresql.conf')
+    conf = open(conf_file).read()
+    for f, r in (("#listen_addresses = 'localhost'", "listen_addresses = ''"),
+                 ("#unix_socket_directories = '/var/run/postgresql'", "unix_socket_directories = '%s'" % run)):
+        new_conf = conf.replace(f, r)
+        if new_conf == conf:
+            raise ValueError('Cannot find "%s" in %s' % (f, conf_file))
+        conf = new_conf
+    open(conf_file, 'w').write(conf)
     
     
 if __name__ == '__main__':
     try:
         cli()
     except Exception as e:
+        print('-'*60)
         print('ERROR:', e, file=sys.stderr)
         sys.exit(1)
     sys.exit(0)

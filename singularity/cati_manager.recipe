@@ -1,22 +1,32 @@
 BootStrap: localimage
 From: base_system.simg
-    
+
+%environment:
+    export PGHOST=/tmp
+
 %files
     cati_manager_admin /usr/local/bin
     
 %apprun new
+    export CATI_MANAGER_DIR="$PWD"
     cati_manager_admin new "$@"
 
-    %apphelp new
-    Create a new server instance in the directory /cati_manager/instance.
-    This directory must be bound to a host directory :
-    
-      singularity run -B /somewhere_on_host/instance:/cati_manager/instance -app new
+%apphelp new
+    Create a new server instance in the given directory.
+    Example:
+      singularity run --app new cati_manager.simg catidb-5.8
 
 %startscript
-    cd "${APPROOT_pdf_server}/pdf_server"
-    # Use nohup and /dev/null to completely detach server process from terminal
-    nohup npm start > /dev/null 2>&1 < /dev/null &
+    export CATI_MANAGER_DIR="$PWD"
+    export PGDATA="$CATI_MANAGER_DIR/postgresql"
+    export PGHOST=$CATI_MANAGER_DIR/run
+    pg_ctl -l "$CATI_MANAGER_DIR/log/postgresql.log" start
 
+    $CATI_MANAGER_DIR/venv/bin/waitress-serve --call 'cati_manager:create_app' 
+
+%runscript
+    export CATI_MANAGER_DIR="$PWD"
     
+    exec "$@"
+
     
