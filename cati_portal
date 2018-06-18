@@ -18,9 +18,14 @@ def check_call(cmd, *args, **kwargs):
     return subprocess.check_call(cmd, *args, **kwargs)
 
 @cli.command()
-@click.argument('directory', type=click.Path(exists=False, file_okay=False))
+@click.option('-d', '--directory', type=click.Path(exists=False, file_okay=False))
 def new(directory):
-    directory = osp.normpath(osp.abspath(directory))
+    if directory is None:
+        directory = osp.dirname(osp.dirname(osp.abspath(__file__)))
+    else:
+        directory = osp.normpath(osp.abspath(directory))
+    print(repr(directory))
+    return
     print('Creating new cati_manager instance in', directory)
     venv = osp.join(directory, 'venv')
     git = osp.join(directory, 'git')

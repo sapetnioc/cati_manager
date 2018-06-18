@@ -7,16 +7,6 @@ From: base_system.simg
 %files
     cati_manager_admin /usr/local/bin
     
-%startscript
-    export CATI_MANAGER_DIR="$PWD"
-    export PGDATA="$CATI_MANAGER_DIR/postgresql"
-    export PGHOST=$CATI_MANAGER_DIR/run
-    echo "Starting Postgresql server"
-    pg_ctl -l "$CATI_MANAGER_DIR/log/postgresql.log" start
-
-    echo "Starting waitress (i.e. web) server"
-    exec $CATI_MANAGER_DIR/venv/bin/waitress-serve --call 'cati_manager:create_app' 
-
 %apprun new
     export CATI_MANAGER_DIR="$PWD"
     cati_manager_admin new "$@"
@@ -31,4 +21,14 @@ From: base_system.simg
     
     exec "$@"
 
+%startscript
+    echo "$@"
+    export CATI_MANAGER_DIR="$PWD"
+    export PGDATA="$CATI_MANAGER_DIR/postgresql"
+    export PGHOST=$CATI_MANAGER_DIR/run
+    echo "Starting Postgresql server"
+    pg_ctl -l "$CATI_MANAGER_DIR/log/postgresql.log" start
+
+    echo "Starting waitress (i.e. web) server"
+    $CATI_MANAGER_DIR/venv/bin/waitress-serve --call 'cati_manager:create_app' 
     
