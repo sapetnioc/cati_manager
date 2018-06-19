@@ -45,8 +45,6 @@ INSERT INTO column_properties VALUES ('identity', 'last_name', '{"label": "last 
 INSERT INTO column_properties VALUES ('identity', 'registration_time', '{"visible": false}');
 INSERT INTO column_properties VALUES ('identity', 'email_verification_time', '{"visible": false}');
 
-INSERT INTO identity ( login, registration_time ) VALUES ( 'cati_manager', now() ); 
-
 CREATE TABLE pgp_public_keys ( name VARCHAR NOT NULL PRIMARY KEY, pgp_key BYTEA );
 
 CREATE FUNCTION create_identity_role() RETURNS trigger AS $$
@@ -83,19 +81,22 @@ CREATE TRIGGER delete_identity_role BEFORE DELETE ON identity FOR EACH ROW EXECU
 
 
 
-CREATE TABLE software_component (
+CREATE TABLE git_repository (
     id TEXT PRIMARY KEY NOT NULL, 
     name TEXT,
     description TEXT,
-    git_url TEXT,
-    installed_version TEXT );
+    url TEXT );
+
+CREATE TABLE installed_software (
+    repository TEXT REFERENCES git_repository ON UPDATE CASCADE PRIMARY KEY,
+    tag TEXT);
 
 CREATE TABLE project_module (
     id TEXT PRIMARY KEY NOT NULL, 
     name TEXT,
     description TEXT,
     module TEXT,
-    component TEXT REFERENCES software_component ON UPDATE CASCADE );
+    software TEXT REFERENCES installed_software ON UPDATE CASCADE );
 
 CREATE TABLE project (
     id TEXT PRIMARY KEY NOT NULL, 

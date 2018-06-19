@@ -15,9 +15,9 @@ with psycopg2.connect(sys.argv[1]) as db:
         sql = "INSERT INTO cati_manager.pgp_public_keys (name, pgp_key) VALUES ('cati_manager', %s);"
         cur.execute(sql, [bytes(public_key)])
         
-        db.commit()
+        #db.commit()
         
-        for id, sql in sql_changesets('cati_manager.install'):
-            print(sql)
-            cur.execute(sql)
+        #for id, sql in sql_changesets('cati_manager.install'):
+            #print(sql)
+            #cur.execute(sql)
         
