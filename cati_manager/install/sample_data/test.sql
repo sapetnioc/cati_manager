@@ -1,3 +1,4 @@
+-- cati_manager changeset : sample_data
 INSERT INTO cati_manager.identity (login, password, email, first_name, last_name) 
     VALUES ('just_registered', 'just_registered', 'just_registered@cati-neuroimaging.com', 'Just', 'Registered');
 INSERT INTO cati_manager.identity (login, password, email, first_name, last_name) 

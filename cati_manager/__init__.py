@@ -1,6 +1,26 @@
-from flask import Flask
+import logging.config
+
 
 def create_app(test_config=None):
+    # Some submodules are used in an environement without thirdparty module installed.
+    # Therefore flask cannot be used at module level.
+    from flask import Flask
+    
+    logging.config.dictConfig({
+        'version': 1,
+        'formatters': {'default': {
+            'format': '[%(asctime)s] %(levelname)s in %(module)s: %(message)s',
+        }},
+        'handlers': {'wsgi': {
+            'class': 'logging.handlers.WatchedFileHandler',
+            'formatter': 'default',
+            'filename': '/cati_portal/log/cati_portal.log',
+        }},
+        'root': {
+            'level': 'INFO',
+            'handlers': ['wsgi']
+        }
+    })
     # create and configure the app
     app = Flask(__name__, instance_relative_config=True)
     #app.config.from_object('cati_manager.default_config')

@@ -5,6 +5,7 @@ from flask import current_app, g
 
 from psycopg2.pool import ThreadedConnectionPool
 
+
 class WithDatabaseConnection:
     @staticmethod
     def __enter__():
@@ -58,5 +59,5 @@ def get_cursor():
 def init_app(app):
     login = pwd.getpwuid(os.getuid()).pw_name
     app.db_pool = ThreadedConnectionPool(0, 5, app.config['DATABASE'], requirepeer=login)
-    #TODO: add requirepeer option : https://www.postgresql.org/docs/current/static/libpq-connect.html#LIBPQ-PARAMKEYWORDS
     
+

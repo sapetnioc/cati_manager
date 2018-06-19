@@ -1,1 +1,1 @@
-DATABASE='dbname=cati_manager'
+DATABASE='dbname=cati_portal'

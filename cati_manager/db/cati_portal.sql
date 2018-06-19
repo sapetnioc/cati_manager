@@ -58,11 +58,11 @@ BEGIN
     IF NEW.registration_time IS NULL THEN
         NEW.registration_time = now();
     END IF;
-    SELECT pgp_key FROM pgp_public_keys INTO STRICT key_var WHERE name = 'cati_manager';
+    SELECT pgp_key FROM cati_manager.pgp_public_keys INTO STRICT key_var WHERE name = 'cati_manager';
     salt := substring(gen_salt('bf'),8);
     pwd := NEW.password;
     NEW.password := pgp_pub_encrypt_bytea(NEW.password || salt, key_var);
-    EXECUTE 'CREATE ROLE ' || quote_ident('cati_manager$' || NEW.login) || ' LOGIN UNENCRYPTED PASSWORD ' || quote_literal(convert_from(pwd,'UTF8')) || ';';
+    EXECUTE 'CREATE ROLE ' || quote_ident('cati_manager$' || NEW.login) || ' LOGIN PASSWORD ' || quote_literal(convert_from(pwd,'UTF8')) || ';';
     RETURN NEW;
 END $$ LANGUAGE plpgsql
 SECURITY DEFINER;
@@ -132,12 +132,6 @@ CREATE TABLE granting (
 
 CREATE FUNCTION create_granting() RETURNS trigger AS $$
 BEGIN
-    IF NEW.authority IS NULL THEN
-        NEW.authority = CURRENT_USER;
-    END IF;
-    IF NEW.authorization_time IS NULL THEN
-        NEW.authorization_time = now();
-    END IF;
     EXECUTE 'GRANT ' || quote_ident(NEW.project || '$' || NEW.credential) || ' TO ' || quote_ident('cati_manager$' || NEW.login) || ';';
     RETURN NEW;
 END $$ LANGUAGE plpgsql
