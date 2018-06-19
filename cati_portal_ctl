@@ -65,7 +65,7 @@ def check_output(cmd, input=None, **kwargs):
 @click.option('--delete-existing', is_flag=True)
 def new(delete_existing):
     directory = osp.dirname(osp.dirname(osp.abspath(__file__)))
-    print('Creating new cati_manager instance in', directory)
+    print('Creating new cati_portal instance in', directory)
     base_simg = osp.join(directory, 'base.simg')
     cati_portal_simg = osp.join(directory, 'cati_portal.simg')
     venv = osp.join(directory, 'venv')
@@ -103,7 +103,7 @@ def new(delete_existing):
         os.mkdir(run)
     
 
-    #check_call(['git', 'clone', 'https://github.com/sapetnioc/cati_manager.git', git])
+    #check_call(['git', 'clone', 'https://github.com/sapetnioc/cati_portal.git', git])
     #check_call(['git', 'checkout', 'flask'], cwd=git)
     
     if not osp.exists(venv):
@@ -156,7 +156,7 @@ Expire-Date: 0
         singularity.start('cati_portal')
         try:
             singularity(['createdb', 'cati_portal'])
-            singularity(['/cati_portal/venv/bin/python', '-m', 'cati_manager.db', 'dbname=cati_portal'])
+            singularity(['/cati_portal/venv/bin/python', '-m', 'cati_portal.db', 'dbname=cati_portal'])
         finally:
             singularity.stop('cati_portal')
     

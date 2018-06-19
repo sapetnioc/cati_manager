@@ -1,29 +1,34 @@
-CATI Manager
+CATI Portal
 ============
 
 Getting Started
 ---------------
 
-- Change directory into your newly created project.
+- Install dependencies
 
-    cd cati_manager
+    sudo apt install git python3 python3-click singularity-container
 
-- Create a Python virtual environment.
+- Create a new directory for hosting an instance of the portal (everything 
+  the instance will create goes into that directory)
 
-    python3 -m venv env
+    mkdir cati_portal
 
-- Upgrade packaging tools.
+- Download source code
 
-    env/bin/pip install --upgrade pip setuptools
+    git clone https://github.com/sapetnioc/cati_portal.git cati_portal/git
 
-- Install the project in editable mode with its testing requirements.
+- During the transition from Pyramid to Flask, it is necessary to use the "flask" branch:
 
-    env/bin/pip install -e ".[testing]"
+    cd cati_portal/git
+    git checkout flask
+    cd ../..
 
-- Run your project's tests.
+- Install a new portal
 
-    env/bin/pytest
+    cati_portal/git/cati_portal_ctl new
 
-- Run your project.
+- Start the portal
 
-    env/bin/pserve development.ini
+    cati_portal/git/cati_portal_ctl start
+
+- Visit http://localhost:8080

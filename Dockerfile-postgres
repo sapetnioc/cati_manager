@@ -1,6 +1,0 @@
-FROM postgres:9
-
-RUN apt-get update
-RUN apt-get install -y python3 postgresql-plpython3-$PG_MAJOR
-
-COPY ./cati_manager/install/cati_manager.sql /docker-entrypoint-initdb.d/init_cati_manager.sql

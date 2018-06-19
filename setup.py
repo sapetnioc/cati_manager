@@ -21,9 +21,9 @@ tests_require = [
 ]
 
 setup(
-    name='cati_manager',
+    name='cati_portal',
     version='0.0',
-    description='CATI Manager',
+    description='CATI Portal',
     long_description=README + '\n\n' + CHANGES,
     classifiers=[
         'Programming Language :: Python',
@@ -42,9 +42,4 @@ setup(
         'testing': tests_require,
     },
     install_requires=requires,
-    #entry_points={
-        #'paste.app_factory': [
-            #'main = cati_manager:main',
-        #],
-    #},
 )
