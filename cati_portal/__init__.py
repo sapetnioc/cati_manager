@@ -23,7 +23,6 @@ def create_app(test_config=None):
     })
     # create and configure the app
     app = Flask(__name__, instance_relative_config=True)
-    #app.config.from_object('cati_manager.default_config')
     
     if test_config is None:
         # load the instance config, if it exists, when not testing
@@ -39,7 +38,7 @@ def create_app(test_config=None):
     @app.route('/hello')
     def hello():
         with db.get_cursor() as cur:
-            cur.execute('SELECT * FROM cati_manager.identity;')
+            cur.execute('SELECT * FROM cati_portal.identity;')
             return str(cur.fetchall())
         return 'Hello, World!'
 
@@ -54,7 +53,7 @@ def create_app(test_config=None):
 #from pyramid.session import UnencryptedCookieSessionFactoryConfig
 #from pyramid.renderers import JSON
 
-#from cati_manager.authentication import authentication_callback
+#from cati_portal.authentication import authentication_callback
 
 #class PrincipalAuthorizationPolicy:
     #def permits(self, context, principals, permission):
@@ -109,7 +108,7 @@ def create_app(test_config=None):
     #config.include('.views.upload')
     #config.include('.views.project')
     #config.add_route('test', '/test')
-    #config.scan('cati_manager.views')
+    #config.scan('cati_portal.views')
         
     ## pgpy emit warnings that can be ignored
     ## I do not know how to select warnings to ignore.

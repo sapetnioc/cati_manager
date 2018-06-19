@@ -4,7 +4,7 @@ from pyramid.view import view_config
 from pyramid.security import Authenticated
 from pyramid.httpexceptions import HTTPFound
 
-from cati_manager.views.admin import check_maintenance
+from cati_portal.views.admin import check_maintenance
 
 @view_config(route_name='home', renderer='templates/home.jinja2')
 def home_anonymous(request):
@@ -16,7 +16,7 @@ def home_anonymous(request):
              effective_principals=Authenticated)
 def home_authenticated(request):
     check_maintenance(request)
-    if request.has_permission('cati_manager_valid_user'):
+    if request.has_permission('cati_portal_valid_user'):
         return HTTPFound('/dashboard')
     else:
         return {'title': 'CATI Manager'}

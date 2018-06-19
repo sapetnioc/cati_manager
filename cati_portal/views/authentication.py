@@ -10,9 +10,9 @@ from pyramid.view import view_config, forbidden_view_config
 from pyramid.security import remember, forget
 from pyramid.httpexceptions import HTTPFound, HTTPNotFound
 
-from cati_manager.authentication import check_password
-from cati_manager.postgres import manager_connect, table_info, table_insert
-from cati_manager.views.admin import check_maintenance
+from cati_portal.authentication import check_password
+from cati_portal.postgres import manager_connect, table_info, table_insert
+from cati_portal.views.admin import check_maintenance
 
 def includeme(config):
     config.add_route('login', '/login')
@@ -81,7 +81,7 @@ def registration_form(request):
     check_maintenance()
     return {
         'data_type': 'registration',
-        'db_info': table_info(manager_connect(request), 'cati_manager', 'identity'),
+        'db_info': table_info(manager_connect(request), 'cati_portal', 'identity'),
         'button': 'register',
     }
 
@@ -92,7 +92,7 @@ def registration_validation(request):
     login = request.params['login']
     with manager_connect(request) as db:
         with db.cursor() as cur:
-            sql = 'SELECT count(*) FROM cati_manager.identity WHERE login = %s'
+            sql = 'SELECT count(*) FROM cati_portal.identity WHERE login = %s'
             cur.execute(sql, [login])
             if cur.fetchone()[0]:
                 errors['login'] = 'You must choose another login'
@@ -106,7 +106,7 @@ def registration_validation(request):
                 return errors
             data = dict(request.params)
             del data['check_password']
-            table_insert(db, 'cati_manager', 'identity', data=[data])
+            table_insert(db, 'cati_portal', 'identity', data=[data])
     request.session.flash('User %s sucessfuly registered' % login, 'success')
     return {'redirection': request.application_url}
 
@@ -118,11 +118,11 @@ def email_validation(request):
     with manager_connect(request) as db:
         with db.cursor() as cur:
             cur.execute('SELECT count(*) '
-                        'FROM cati_manager.identity_email_not_verified '
+                        'FROM cati_portal.identity_email_not_verified '
                         'WHERE login = %s AND '
                         '      secret = %s;', [login, secret])
             if cur.fetchone()[0]:
-                cur.execute('UPDATE cati_manager.identity SET email_verification_time=%s WHERE login=%s',
+                cur.execute('UPDATE cati_portal.identity SET email_verification_time=%s WHERE login=%s',
                             [datetime.datetime.now().isoformat(), login])
                 request.session.flash('Email verified for user %s. It is now necessary to wait for a moderator validation of the account in order to be able to use it.' % login, 'warning')
                 return HTTPFound(location='/')

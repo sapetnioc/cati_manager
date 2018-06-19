@@ -102,27 +102,27 @@ class ConnectionPool:
 connection_pool = ConnectionPool()
 
 def manager_connect(request):
-    host = request.registry.settings['cati_manager.postgresql_host']
-    port = request.registry.settings.get('cati_manager.postgresql_port')
-    database = request.registry.settings['cati_manager.database']
-    user = request.registry.settings['cati_manager.database_admin']
-    password = request.registry.settings['cati_manager.database_admin_challenge']
+    host = request.registry.settings['cati_portal.postgresql_host']
+    port = request.registry.settings.get('cati_portal.postgresql_port')
+    database = request.registry.settings['cati_portal.database']
+    user = request.registry.settings['cati_portal.database_admin']
+    password = request.registry.settings['cati_portal.database_admin_challenge']
     return connection_pool.connect(host=host, port=port, database=database, user=user, password=password)
 
 
 def user_connect(request):
-    from cati_manager.authentication import get_user_password
+    from cati_portal.authentication import get_user_password
     
-    host = request.registry.settings['cati_manager.postgresql_host']
-    port = request.registry.settings.get('cati_manager.postgresql_port')
-    database = request.registry.settings['cati_manager.database']
+    host = request.registry.settings['cati_portal.postgresql_host']
+    port = request.registry.settings.get('cati_portal.postgresql_port')
+    database = request.registry.settings['cati_portal.database']
     user = request.authenticated_userid
     if not user:
         raise PermissionError('One must be logged in to perform this database action')
     password= get_user_password(request, user)
     if password is None:
         raise PermissionError('Cannot find password for user %s' % user)
-    return connection_pool.connect(host=host, port=port, database=database, user='cati_manager$' + user, password=password)
+    return connection_pool.connect(host=host, port=port, database=database, user='cati_portal$' + user, password=password)
 
 
 def table_info(db, schema, table):

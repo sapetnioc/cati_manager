@@ -5,13 +5,13 @@ import json
 
 import pgpy
 
-from cati_manager.postgres import manager_connect
+from cati_portal.postgres import manager_connect
 
 pgp_secret_key = None
 def get_pgp_secret_key(request):
     global pgp_secret_key
     if pgp_secret_key is None:
-        path= osp.expandvars(request.registry.settings['cati_manager.pgp_secret_key'])
+        path= osp.expandvars(request.registry.settings['cati_portal.pgp_secret_key'])
         pgp_secret_key, other = pgpy.PGPKey.from_file(path)
     return pgp_secret_key
 
@@ -22,7 +22,7 @@ def get_user_password(request, login=None):
     key = get_pgp_secret_key(request)
     with manager_connect(request) as db:
         with db.cursor() as cur:
-            cur.execute('SELECT password FROM cati_manager.identity WHERE login=%s', [login])
+            cur.execute('SELECT password FROM cati_portal.identity WHERE login=%s', [login])
             if cur.rowcount:
                 encrypted = cur.fetchone()[0].tobytes()
                 pwd = key.decrypt(pgpy.PGPMessage.from_blob(encrypted)).message[:-22] # Salt length is 22 bytes
@@ -31,11 +31,11 @@ def get_user_password(request, login=None):
 
 
 def check_password(login, password, request):
-    admin_login = request.registry.settings['cati_manager.database_admin']
+    admin_login = request.registry.settings['cati_portal.database_admin']
     if login == admin_login:
-        admin_challenge = request.registry.settings['cati_manager.database_admin_challenge']
+        admin_challenge = request.registry.settings['cati_portal.database_admin_challenge']
         return hashlib.sha256(password.encode('utf-8')).hexdigest() == admin_challenge
-    maintenance_path = osp.expanduser(request.registry.settings['cati_manager.maintenance_path'])
+    maintenance_path = osp.expanduser(request.registry.settings['cati_portal.maintenance_path'])
     if osp.exists(maintenance_path):
         maintenance = json.load(open(maintenance_path))
         challenge = maintenance['admins'].get(login)
@@ -57,22 +57,22 @@ def authentication_callback(login, request):
     list composed of the user login and the credentials it
     had been granted.
     '''
-    maintenance_path = osp.expanduser(request.registry.settings['cati_manager.maintenance_path'])
+    maintenance_path = osp.expanduser(request.registry.settings['cati_portal.maintenance_path'])
     if osp.exists(maintenance_path):
         maintenance = json.load(open(maintenance_path))
         if login in maintenance['admins']:
-            return [ login, 'cati_manager_server_admin' ]
+            return [ login, 'cati_portal_server_admin' ]
     else:
         with manager_connect(request) as db:
             with db.cursor() as cur:
                 sql = ('SELECT DISTINCT c.project, c.id '
-                       'FROM cati_manager.identity i, cati_manager.granting g, project p, credential c '
+                       'FROM cati_portal.identity i, cati_portal.granting g, project p, credential c '
                        'WHERE i.login=%s AND g.login = i.login AND c.id = g.credential;')
                 cur.execute(sql, [login])
                 principals = ['%s_%s' % i for i in cur]
                 if not principals:
                     # Check that the user exists
-                    cur.execute('SELECT count(*) FROM cati_manager.identity WHERE login = %s;', [login])
+                    cur.execute('SELECT count(*) FROM cati_portal.identity WHERE login = %s;', [login])
                     if not cur.fetchone():
                         return None
         return [ login ] + principals

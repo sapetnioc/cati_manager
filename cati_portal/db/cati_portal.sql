@@ -1,10 +1,10 @@
--- cati_manager changeset : base
+-- cati_portal changeset : base
 CREATE EXTENSION pgcrypto;
 CREATE LANGUAGE plpython3u;
 
-CREATE SCHEMA cati_manager;
+CREATE SCHEMA cati_portal;
 
-SET search_path = cati_manager, public;
+SET search_path = cati_portal, public;
 
 CREATE TABLE column_properties
 (
@@ -56,11 +56,11 @@ BEGIN
     IF NEW.registration_time IS NULL THEN
         NEW.registration_time = now();
     END IF;
-    SELECT pgp_key FROM cati_manager.pgp_public_keys INTO STRICT key_var WHERE name = 'cati_manager';
+    SELECT pgp_key FROM cati_portal.pgp_public_keys INTO STRICT key_var WHERE name = 'cati_portal';
     salt := substring(gen_salt('bf'),8);
     pwd := NEW.password;
     NEW.password := pgp_pub_encrypt_bytea(NEW.password || salt, key_var);
-    EXECUTE 'CREATE ROLE ' || quote_ident('cati_manager$' || NEW.login) || ' LOGIN PASSWORD ' || quote_literal(convert_from(pwd,'UTF8')) || ';';
+    EXECUTE 'CREATE ROLE ' || quote_ident('cati_portal$' || NEW.login) || ' LOGIN PASSWORD ' || quote_literal(convert_from(pwd,'UTF8')) || ';';
     RETURN NEW;
 END $$ LANGUAGE plpgsql
 SECURITY DEFINER;
@@ -69,10 +69,10 @@ CREATE TRIGGER create_identity_role BEFORE INSERT ON identity FOR EACH ROW EXECU
 
 CREATE OR REPLACE FUNCTION delete_identity_role() RETURNS trigger AS $$
 BEGIN
---     EXECUTE 'REVOKE ' || quote_ident(OLD.login) || ' FROM cati_manager;';
+--     EXECUTE 'REVOKE ' || quote_ident(OLD.login) || ' FROM cati_portal;';
 --     EXECUTE 'REASSIGN OWNED BY ' || quote_ident(OLD.login) || ' TO CURRENT_USER;';
 --     EXECUTE 'DROP OWNED BY ' || quote_ident(OLD.login) || ';';
-    EXECUTE 'DROP ROLE ' || quote_ident('cati_manager$' || OLD.login) || ';';
+    EXECUTE 'DROP ROLE ' || quote_ident('cati_portal$' || OLD.login) || ';';
     RETURN OLD;
 END $$ LANGUAGE plpgsql
 SECURITY DEFINER;
@@ -104,7 +104,7 @@ CREATE TABLE project (
     description TEXT,
     module TEXT REFERENCES project_module ON UPDATE CASCADE );
 
-INSERT INTO project (id, name, description) VALUES ('cati_manager', 'CATI manager', 'Management of users and authorizations for all CATI studies and projects');
+INSERT INTO project (id, name, description) VALUES ('cati_portal', 'CATI manager', 'Management of users and authorizations for all CATI studies and projects');
 
 
     
@@ -133,7 +133,7 @@ CREATE TABLE granting (
 
 CREATE FUNCTION create_granting() RETURNS trigger AS $$
 BEGIN
-    EXECUTE 'GRANT ' || quote_ident(NEW.project || '$' || NEW.credential) || ' TO ' || quote_ident('cati_manager$' || NEW.login) || ';';
+    EXECUTE 'GRANT ' || quote_ident(NEW.project || '$' || NEW.credential) || ' TO ' || quote_ident('cati_portal$' || NEW.login) || ';';
     RETURN NEW;
 END $$ LANGUAGE plpgsql
 SECURITY DEFINER;
@@ -146,19 +146,19 @@ CREATE VIEW identity_email_not_verified AS
                     coalesce(last_name,'') || 
                     coalesce(email,'') || 
                     coalesce(registration_time::text, '')) secret
-    FROM cati_manager.identity
-    WHERE login != 'cati_manager' AND
+    FROM cati_portal.identity
+    WHERE login != 'cati_portal' AND
         email_verification_time IS NULL;
 
 CREATE VIEW identity_not_validated AS 
     SELECT *
-    FROM cati_manager.identity i
-    WHERE i.login != 'cati_manager' AND
+    FROM cati_portal.identity i
+    WHERE i.login != 'cati_portal' AND
         i.email_verification_time IS NOT NULL AND
         i.login NOT IN
         (SELECT login 
-            FROM cati_manager.granting g 
-            WHERE g.project = 'cati_manager' AND 
+            FROM cati_portal.granting g 
+            WHERE g.project = 'cati_portal' AND 
                 g.credential = 'valid_user');
 
 -- This view returns all the projects for which the current_user has at least 
@@ -169,21 +169,21 @@ CREATE VIEW my_projects AS
     (SELECT g.project
         FROM granting g);
 
-INSERT INTO credential (project, id, name, description) VALUES ('cati_manager', 'server_admin', 'server administrator', 'A server administrator can put the server in maintenane mode and update the database schema and the software.');
-INSERT INTO credential (project, id, name, description) VALUES ('cati_manager', 'user_moderator', 'user moderator', 'A user moderator can validate and invalidate user accounts.');
-GRANT USAGE ON SCHEMA cati_manager TO cati_manager$server_admin, cati_manager$user_moderator;
-GRANT SELECT, UPDATE, DELETE ON TABLE cati_manager.identity TO cati_manager$server_admin, cati_manager$user_moderator;
-GRANT SELECT ON TABLE cati_manager.project TO PUBLIC;
-GRANT SELECT ON TABLE cati_manager.my_projects TO PUBLIC;
-GRANT SELECT ON TABLE cati_manager.credential TO PUBLIC;
+INSERT INTO credential (project, id, name, description) VALUES ('cati_portal', 'server_admin', 'server administrator', 'A server administrator can put the server in maintenane mode and update the database schema and the software.');
+INSERT INTO credential (project, id, name, description) VALUES ('cati_portal', 'user_moderator', 'user moderator', 'A user moderator can validate and invalidate user accounts.');
+GRANT USAGE ON SCHEMA cati_portal TO cati_portal$server_admin, cati_portal$user_moderator;
+GRANT SELECT, UPDATE, DELETE ON TABLE cati_portal.identity TO cati_portal$server_admin, cati_portal$user_moderator;
+GRANT SELECT ON TABLE cati_portal.project TO PUBLIC;
+GRANT SELECT ON TABLE cati_portal.my_projects TO PUBLIC;
+GRANT SELECT ON TABLE cati_portal.credential TO PUBLIC;
 GRANT SELECT ON granting TO PUBLIC;
 ALTER TABLE granting ENABLE ROW LEVEL SECURITY;
     CREATE POLICY my_grants 
-    ON granting USING (current_user = 'cati_manager$' || login); 
-GRANT SELECT ON TABLE cati_manager.identity_not_validated TO cati_manager$user_moderator;
-GRANT SELECT ON TABLE cati_manager.identity_email_not_verified TO cati_manager$user_moderator;
-GRANT SELECT, INSERT ON TABLE cati_manager.granting TO cati_manager$user_moderator;
-INSERT INTO credential (project, id, name, description) VALUES ('cati_manager', 'valid_user', 'valid user', 'A user with this credential has been validated by a user moderator. Without this credential, a user cannot do anything.');
+    ON granting USING (current_user = 'cati_portal$' || login); 
+GRANT SELECT ON TABLE cati_portal.identity_not_validated TO cati_portal$user_moderator;
+GRANT SELECT ON TABLE cati_portal.identity_email_not_verified TO cati_portal$user_moderator;
+GRANT SELECT, INSERT ON TABLE cati_portal.granting TO cati_portal$user_moderator;
+INSERT INTO credential (project, id, name, description) VALUES ('cati_portal', 'valid_user', 'valid user', 'A user with this credential has been validated by a user moderator. Without this credential, a user cannot do anything.');
 
 
 
@@ -195,7 +195,7 @@ CREATE TABLE study_template
 );
 
 INSERT INTO study_template (id, python_module, description)
-    VALUES ('cati', 'cati_manager.study_template.cati', 'Standard historical CATI organisation of studies');
+    VALUES ('cati', 'cati_portal.study_template.cati', 'Standard historical CATI organisation of studies');
 
 CREATE TABLE study
 (

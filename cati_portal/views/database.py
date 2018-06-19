@@ -2,11 +2,11 @@ from __future__ import absolute_import
 
 from pyramid.view import view_config
 
-from cati_manager.postgres import (user_connect, 
+from cati_portal.postgres import (user_connect, 
                                    table_info,
                                    table_select,
                                    table_insert)
-from cati_manager.views.admin import check_maintenance
+from cati_portal.views.admin import check_maintenance
 
 
 
@@ -15,7 +15,7 @@ def includeme(config):
     config.add_route('table_data', '/db/table/{table}/data')
 
 
-@view_config(route_name='table_info', request_method='GET', renderer='json', permission='cati_manager_valid_user')
+@view_config(route_name='table_info', request_method='GET', renderer='json', permission='cati_portal_valid_user')
 def table_info_view(request):
     check_maintenance(request)
     l = request.matchdict['table'].split('.', 1)
@@ -26,7 +26,7 @@ def table_info_view(request):
         schema, table = l
     return table_info(user_connect(request), schema, table)
 
-@view_config(route_name='table_data', request_method='GET', renderer='json2', permission='cati_manager_valid_user')
+@view_config(route_name='table_data', request_method='GET', renderer='json2', permission='cati_portal_valid_user')
 def table_data_view(request):
     check_maintenance(request)
     l = request.matchdict['table'].split('.', 1)
@@ -57,7 +57,7 @@ def table_data_view(request):
     return table_select(user_connect(request), **kwargs)
 
 
-@view_config(route_name='table_data', request_method='POST', renderer='json2', permission='cati_manager_valid_user')
+@view_config(route_name='table_data', request_method='POST', renderer='json2', permission='cati_portal_valid_user')
 def table_data_view(request):
     check_maintenance(request)
     l = request.matchdict['table'].split('.', 1)

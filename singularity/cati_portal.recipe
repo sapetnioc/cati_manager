@@ -16,5 +16,5 @@ From: ../../base.simg
 %startscript
     pg_ctl -l "$CATI_PORTAL_DIR/log/postgresql.log" start
 
-    exec $CATI_PORTAL_DIR/venv/bin/waitress-serve --call 'cati_manager:create_app' 
+    exec $CATI_PORTAL_DIR/venv/bin/waitress-serve --call 'cati_portal:create_app' 
     

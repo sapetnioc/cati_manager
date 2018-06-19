@@ -6,7 +6,7 @@ import psycopg2
 from pyramid.view import view_config
 from pyramid.httpexceptions import HTTPClientError, HTTPServerError
 
-from cati_manager.views.admin import MaintenanceError
+from cati_portal.views.admin import MaintenanceError
 
 
 @view_config(context=Exception, renderer='templates/exceptions.jinja2')

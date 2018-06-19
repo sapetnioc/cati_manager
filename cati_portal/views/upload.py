@@ -3,8 +3,8 @@ from __future__ import absolute_import
 from pyramid.view import view_config
 from pyramid.httpexceptions import HTTPNotFound
 
-from cati_manager.postgres import user_connect, table_select
-from cati_manager.views.admin import check_maintenance
+from cati_portal.postgres import user_connect, table_select
+from cati_portal.views.admin import check_maintenance
 
 def includeme(config):
     config.add_route('upload', '/upload')

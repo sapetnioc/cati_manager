@@ -3,7 +3,7 @@ import importlib
 import os.path as osp
 import re
 
-_changesets_splitter = re.compile(r'\s*--\s*cati_manager\s+changeset\s*:\s*([^\s]*)')
+_changesets_splitter = re.compile(r'\s*--\s*cati_portal\s+changeset\s*:\s*([^\s]*)')
 def sql_changesets(module):
     '''
     Find all the SQL changesets defined in a given module. The module must be
@@ -23,7 +23,7 @@ def sql_changesets(module):
                                        recursive=True)):
         changesets = _changesets_splitter.split(open(sql_file).read())
         if changesets[0].strip():
-            raise ValueError('File %s does not start with "-- cati_manager changeset:"' % sql_file)
+            raise ValueError('File %s does not start with "-- cati_portal changeset:"' % sql_file)
         del changesets[0]
         while changesets:
             id = changesets.pop(0)

@@ -6,7 +6,7 @@ class StudyManager:
     def __init__(self, db, id):
         with db:
             with db.cursor() as cur:
-                sql = 'SELECT label, description, properties FROM cati_manager.study WHERE id=%s;'
+                sql = 'SELECT label, description, properties FROM cati_portal.study WHERE id=%s;'
                 cur.execute(sql, [id])
                 if cur.rowcount == 0:
                     raise ValueError('Unknown study identifier : %s' % id)
