@@ -1,0 +1,8 @@
+{% extends "layout.html" -%}
+{% block title %}Registration{% endblock title -%}
+{% block content -%}
+{% if message -%}
+<center><font color="red">{{ message|e }}</font></color><br/>
+{%- endif %}
+{%- include 'form.html' %}
+{%- endblock content %}
