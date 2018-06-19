@@ -1,20 +1,20 @@
 <!DOCTYPE html>
-<html lang="{{request.locale_name}}">
+<html lang="en">
   <head>
     <meta charset="utf-8">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="description" content="CATI security management">
+    <meta name="description" content="CATI portal">
     <meta name="author" content="CATI">
-    <link rel="shortcut icon" href="{{request.static_url('cati_manager:static/images/catidb.png')}}">
+    <link rel="shortcut icon" href="{{url_for('static', filename='images/catidb.png')}}">
 
-    <title>{% set title %}{% block title %}{{title|default('CATI manager')}}{% endblock %}{% endset %}</title>
+    <title>{% set title %}{% block title %}{{title|default('CATI portal')}}{% endblock %}{% endset %}</title>
 
-    <link href="{{request.static_url('cati_manager:static/css/bootstrap.min.css')}}" rel="stylesheet">
-    <link href="{{request.static_url('cati_manager:static/css/jquery-ui.min.css')}}" rel="stylesheet">
+    <link href="{{url_for('static', filename='css/bootstrap.min.css')}}" rel="stylesheet">
+    <link href="{{url_for('static', filename='css/jquery-ui.min.css')}}" rel="stylesheet">
 
-    <!-- Custom styles for cati_manager -->
-    <link href="{{request.static_url('cati_manager:static/css/cati_manager.css')}}" rel="stylesheet">
+    <!-- Custom styles for cati_portal -->
+    <link href="{{url_for('static', filename='css/cati_portal.css')}}" rel="stylesheet">
     {%- block head %}{% endblock -%}
   </head>
 
@@ -29,15 +29,15 @@
                     <span class="icon-bar"></span>
                     <span class="icon-bar"></span>
                 </button>
-                <p class="navbar-text">{{site_name|default('CATI manager')}}</p>
+                <p class="navbar-text">{{site_name|default('CATI portal')}}</p>
             </div>
             <div id="navbarCollapse" class="collapse navbar-collapse">
                 <ul class="nav navbar-nav">
-                    <li><a href="{{request.application_url}}"><i class="glyphicon glyphicon-home"></i></a></li>
+                    <li><a href="{{url_for('home.main')}}"><i class="glyphicon glyphicon-home"></i></a></li>
                 </ul>
                 <ul class="nav navbar-nav navbar-right">
-                    {%- if request.authenticated_userid %}
-                    <li><a href="#"><span class="glyphicon glyphicon-user"></span> {{request.authenticated_userid}} </a></li>
+                    {%- if current_user.is_authenticated %}
+                    <li><a href="#"><span class="glyphicon glyphicon-user"></span> {{current_user.username}} </a></li>
                     <li><a href="logout"><span class="glyphicon glyphicon-log-out"></span> Logout&nbsp;</a></li>
                     {%- else -%}
                     <li><a href="login"><span class="glyphicon glyphicon-log-in"></span> Login&nbsp;</a></li>
@@ -47,7 +47,7 @@
         </nav>
     </header>
     <section>
-      {%- for type in ('success', 'info', 'warning', 'danger') %}
+{#      {%- for type in ('success', 'info', 'warning', 'danger') %}
         {%- for message in request.session.pop_flash(type) %}
           <div class="alert alert-{{type}} alert-dismissible" role="alert">
           <button type="button" class="close" data-dismiss="alert" aria-label="Close">
@@ -57,12 +57,12 @@
           </div>
         {% endfor -%}
       {% endfor -%}
-    {% block content %}{{content|safe}}{% endblock -%}
+#}    {% block content %}{{content|safe}}{% endblock -%}
     </section>
     <footer>
         <nav class="navbar navbar-default navbar-fixed-bottom" role="navigation">
                 <div class="container">
-                    <a href="http://cati-neuroimaging.com"><img style="margin-top:5px;" src="{{ request.static_url('cati_manager:static/images/catidb.png') }}" class="img-responsive center-block" alt="CATI DB logo" width="70px"></a>
+                    <a href="http://cati-neuroimaging.com"><img style="margin-top:5px;" src="{{ url_for('static', filename='images/catidb.png') }}" class="img-responsive center-block" alt="CATI DB logo" width="70px"></a>
                 </div>
             </nav>
     </footer>
@@ -76,10 +76,10 @@
     <!-- Bootstrap core JavaScript
     ================================================== -->
     <!-- Placed at the end of the document so the pages load faster -->
-    <script src="{{request.static_url('cati_manager:static/js/jquery.min.js')}}"></script>
-    <script src="{{request.static_url('cati_manager:static/js/jquery-ui.min.js')}}"></script>
-    <script src="{{request.static_url('cati_manager:static/js/bootstrap.min.js')}}"></script>
-    <script src="{{request.static_url('cati_manager:static/js/cati_manager.js')}}"></script>
+    <script src="{{url_for('static', filename='js/jquery.min.js')}}"></script>
+    <script src="{{url_for('static', filename='js/jquery-ui.min.js')}}"></script>
+    <script src="{{url_for('static', filename='js/bootstrap.min.js')}}"></script>
+    <script src="{{url_for('static', filename='js/cati_portal.js')}}"></script>
     {% block script %}{% endblock -%}
   </body>
 </html>

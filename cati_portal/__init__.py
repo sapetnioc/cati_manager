@@ -5,6 +5,7 @@ def create_app(test_config=None):
     # Some submodules are used in an environement without thirdparty module installed.
     # Therefore flask cannot be used at module level.
     from flask import Flask
+    from flask_login import LoginManager
     
     logging.config.dictConfig({
         'version': 1,
@@ -31,16 +32,13 @@ def create_app(test_config=None):
         # load the test config if passed in
         app.config.from_mapping(test_config)
 
+    login = LoginManager(app)
+
     from . import db
     db.init_app(app)
     
-    # a simple page that says hello
-    @app.route('/hello')
-    def hello():
-        with db.get_cursor() as cur:
-            cur.execute('SELECT * FROM cati_portal.identity;')
-            return str(cur.fetchall())
-        return 'Hello, World!'
+    from . import home
+    app.register_blueprint(home.bp)
 
     return app
 

@@ -1,15 +1,16 @@
-{% extends "layout.jinja2" %}
+{% extends "layout.html" %}
 
 {%- set dashboard_callbacks = {} -%}
 
 {% block content %}
 <div class="content">
   <h1>{{title}}</h1>
-  {%- if not request.authenticated_userid %}
-  <p>You must <a href="login">login</a> to use this web site. If you do not already have an account, you can <a href="register">register</a>.</p>
-  {%- elif not request.has_permission('cati_manager_valid_user') -%}
+  {%- if not current_user.is_authenticated %}
+  <p>You must <a href="{{url_for('home.login')}}">login</a> to use this web site. If you do not already have an account, you can <a href="{{url_for('home.register')}}">register</a>.</p>
+{#  {%- elif not request.has_permission('cati_manager_valid_user') -%}
   Your account is not validated yet. You will receive an email when a moderator take a decision about your registration request.
-  {%- else -%}
+#}  {%- else -%}
+  {{ current_user.username }}
   {%- for d in dashboards %}
     {%- import 'data/' + d.item_type + '.jinja2' as data_type with context -%}
     <h2>{{data_type.title()|safe}}</h2>

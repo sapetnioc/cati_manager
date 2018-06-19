@@ -77,7 +77,7 @@ def new(delete_existing):
     postgresql = osp.join(directory, 'postgresql')
     
     if delete_existing:
-        for path in (venv, postgresql, log, run, tmp, gpg):
+        for path in (venv, postgresql, log, run, tmp):
             if osp.exists(path):
                 print('Delete', path)
                 if os.path.isdir(path):

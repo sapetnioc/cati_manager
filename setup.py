@@ -10,6 +10,7 @@ with open(os.path.join(here, 'CHANGES.txt')) as f:
 
 requires = [
     'flask >= 1.0',
+    'flask-login',
     'psycopg2-binary >= 2.7',
     'click >= 5.0',
 ]
