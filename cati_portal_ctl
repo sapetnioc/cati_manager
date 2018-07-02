@@ -6,8 +6,13 @@ import os.path as osp
 import sys
 import shutil
 import subprocess
+import string
 import tempfile
-
+try:
+    from secrets import choice
+except ImportError:
+    from random import choice
+    
 import click
 
 class Singularity:
@@ -73,7 +78,7 @@ def new(delete_existing):
     log = osp.join(directory, 'log')
     run = osp.join(directory, 'run')
     tmp = osp.join(directory, 'tmp')
-    gpg = osp.join(directory, 'gpg')
+    pgp = osp.join(directory, 'pgp')
     postgresql = osp.join(directory, 'postgresql')
     
     if delete_existing:
@@ -107,19 +112,17 @@ def new(delete_existing):
     #check_call(['git', 'checkout', 'flask'], cwd=git)
     
     if not osp.exists(venv):
-        singularity(['python3', '-m', 'venv', '/cati_portal/venv']) 
+        singularity(['python3', '-m', 'venv', '--system-site-packages', '/cati_portal/venv']) 
         pip = '/cati_portal/venv/bin/pip'
-        singularity([pip, 'install', 'wheel'])
-        singularity([pip, 'install', 'waitress', 'psycopg2', 'pgpy'])
         singularity([pip, 'install', '--editable', git])
                 
                 
-    if not osp.exists(gpg):
-        os.mkdir(gpg)
-        gpg_tmp = tempfile.mkdtemp(prefix='gpg.', dir=tmp)
+    if not osp.exists(pgp):
+        os.mkdir(pgp)
+        pgp_tmp = tempfile.mkdtemp(prefix='pgp.', dir=tmp)
         try:
-            c_gpg_tmp = osp.join('/cati_portal/tmp', osp.basename(gpg_tmp))
-            gpg_script = '''%echo Generating cati_portal PGP key
+            c_pgp_tmp = osp.join('/cati_portal/tmp', osp.basename(pgp_tmp))
+            pgp_script = '''%echo Generating cati_portal PGP key
 %no-protection
 Key-Type: 1
 Subkey-Type: default
@@ -130,17 +133,17 @@ Expire-Date: 0
 %commit
 %echo done
 '''
-            singularity(['gpg2', '--batch', '--gen-key', '--homedir', c_gpg_tmp], input=gpg_script)
-            singularity(['gpg2', '--list-keys', '--homedir', c_gpg_tmp])
-            public_key = singularity.output(['gpg2', '--homedir', c_gpg_tmp, '--export', 'cati_portal'])
-            public_key_file = osp.join(gpg, 'public.key')
+            singularity(['gpg2', '--batch', '--gen-key', '--homedir', c_pgp_tmp], input=pgp_script)
+            singularity(['gpg2', '--list-keys', '--homedir', c_pgp_tmp])
+            public_key = singularity.output(['gpg2', '--homedir', c_pgp_tmp, '--export', 'cati_portal'])
+            public_key_file = osp.join(pgp, 'public.key')
             open(public_key_file, 'wb').write(public_key)
             import pgpy
             key, other = pgpy.PGPKey.from_file(public_key_file)
-            secret_key = singularity.output(['gpg2', '--homedir', c_gpg_tmp, '--export-secret-keys', 'cati_portal'])
-            open(osp.join(gpg, 'secret.key'), 'wb').write(secret_key)
+            secret_key = singularity.output(['gpg2', '--homedir', c_pgp_tmp, '--export-secret-keys', 'cati_portal'])
+            open(osp.join(pgp, 'secret.key'), 'wb').write(secret_key)
         finally:
-            shutil.rmtree(gpg_tmp, ignore_errors=True)
+            shutil.rmtree(pgp_tmp, ignore_errors=True)
 
     if not osp.exists(postgresql):
         singularity(['pg_ctl', 'initdb'])
@@ -160,7 +163,10 @@ Expire-Date: 0
         finally:
             singularity.stop('cati_portal')
     
-    
+    installation_password = singularity.output(['/cati_portal/venv/bin/python', '-m', 'cati_portal.authentication']).decode('UTF8')
+    print('Installation password =', installation_password)
+        
+
 @cli.command()
 def start():
     singularity = Singularity()

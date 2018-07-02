@@ -12,11 +12,6 @@ import hashlib
 
 import psycopg2
 import psycopg2.extras
-import yaml
-
-from pyramid.exceptions import NotFound
-
-
 
 
 def install_sql_changesets(db, schema, module):
@@ -197,6 +192,7 @@ def table_info(db, schema, table):
                          WHERE t.table_schema = '%s' AND t.table_name = '%s';''' % (schema, table)
                 cur.execute(sql)
                 if cur.fetchone()[0] ==  0:
+                    # TODO NotFound was on Pyramid, it deos not exists anymore
                     raise NotFound('No database table or view named "%s"' % table)
     return {'columns': columns}
 

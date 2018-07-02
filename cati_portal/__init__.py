@@ -1,4 +1,6 @@
 import logging.config
+import os
+import os.path as osp
 
 
 def create_app(test_config=None):
@@ -24,7 +26,8 @@ def create_app(test_config=None):
     })
     # create and configure the app
     app = Flask(__name__, instance_relative_config=True)
-    app.secret_key = open('/cati_portal/gpg/secret.key', 'rb').read()
+    secret_key_file = osp.join(os.environ.get('CATI_PORTAL_DIR', '/cati_portal'), 'pgp', 'secret.key')
+    app.secret_key = open(secret_key_file, 'rb').read()
     
     if test_config is None:
         # load the instance config, if it exists, when not testing

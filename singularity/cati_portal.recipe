@@ -2,7 +2,6 @@ BootStrap: localimage
 From: ../../base.simg
 
 %post
-    apt install -y gnupg2
     
 %environment:
     export PGHOST=/tmp
