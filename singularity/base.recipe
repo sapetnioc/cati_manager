@@ -6,7 +6,7 @@ MirrorURL: http://archive.ubuntu.com/ubuntu/
     sources.list /etc/apt/sources.list
 
 %post
-    apt-get update && apt-get -y install python3 git postgresql-plpython3 python3-click python3-venv gnupg2 python3-wheel python3-waitress python3-psycopg2 python3-pgpy # && apt-get -y clean
+    apt-get update && apt-get -y install ipython3 git postgresql-plpython3 python3-click python3-venv gnupg2 python3-wheel python3-waitress python3-psycopg2 python3-pgpy # && apt-get -y clean
     mkdir /cati_manager
     
     echo en_US.UTF-8 UTF-8 > /etc/locale.gen
