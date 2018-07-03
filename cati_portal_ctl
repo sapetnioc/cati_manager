@@ -7,6 +7,7 @@ import sys
 import shutil
 import subprocess
 import string
+import time
 import tempfile
 try:
     from secrets import choice
@@ -68,7 +69,8 @@ def check_output(cmd, input=None, **kwargs):
 
 @cli.command()
 @click.option('--delete-existing', is_flag=True)
-def new(delete_existing):
+@click.option('--pg_port', default='5432')
+def new(delete_existing, pg_port):
     directory = osp.dirname(osp.dirname(osp.abspath(__file__)))
     print('Creating new cati_portal instance in', directory)
     base_simg = osp.join(directory, 'base.simg')
@@ -79,10 +81,11 @@ def new(delete_existing):
     run = osp.join(directory, 'run')
     tmp = osp.join(directory, 'tmp')
     pgp = osp.join(directory, 'pgp')
+    instance = osp.join(directory, 'flask_instance')
     postgresql = osp.join(directory, 'postgresql')
     
     if delete_existing:
-        for path in (venv, postgresql, log, run, tmp):
+        for path in (venv, postgresql, log, run, tmp, instance):
             if osp.exists(path):
                 print('Delete', path)
                 if os.path.isdir(path):
@@ -147,22 +150,38 @@ Expire-Date: 0
 
     if not osp.exists(postgresql):
         singularity(['pg_ctl', 'initdb'])
+
         conf_file = osp.join(postgresql, 'postgresql.conf')
         conf = open(conf_file).read()
-        for f, r in (("#listen_addresses = 'localhost'", "listen_addresses = ''"),
+        for f, r in (("#port = 5432", 'port = %s' % pg_port),
                     ("#unix_socket_directories = '/var/run/postgresql'", "unix_socket_directories = '%s'" % run)):
             new_conf = conf.replace(f, r)
             if new_conf == conf:
                 raise ValueError('Cannot find "%s" in %s' % (f, conf_file))
             conf = new_conf
         open(conf_file, 'w').write(conf)
+
+        conf_file = osp.join(postgresql, 'pg_hba.conf')
+        print('''local   all             all                                     peer
+host    all             all             127.0.0.1/32            md5
+''', file=open(conf_file, 'w'))
+        
         singularity.start('cati_portal')
+        time.sleep(3)
         try:
-            singularity(['createdb', 'cati_portal'])
-            singularity(['/cati_portal/venv/bin/python', '-m', 'cati_portal.db', 'dbname=cati_portal'])
+            singularity(['createdb','-p', pg_port, 'cati_portal'])
+            singularity(['/cati_portal/venv/bin/python', '-m', 'cati_portal.db', 'dbname=cati_portal port=%s' % pg_port])
         finally:
             singularity.stop('cati_portal')
     
+    if not osp.exists(instance):
+        os.mkdir(instance)
+        config_file = osp.join(instance, 'config.py')
+        print('''POSTGRES_HOST = 'localhost'
+POSTGRES_PORT = %s
+POSTGRES_DATABASE = 'cati_portal'
+''' % pg_port, file=open(config_file, 'w'))
+        
     installation_password = singularity.output(['/cati_portal/venv/bin/python', '-m', 'cati_portal.authentication']).decode('UTF8')
     print('Installation password =', installation_password)
         

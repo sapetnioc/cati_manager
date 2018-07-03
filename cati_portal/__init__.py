@@ -9,6 +9,8 @@ def create_app(test_config=None):
     from flask import Flask
     from flask_login import LoginManager
     
+    from cati_portal.authentication import User
+    
     logging.config.dictConfig({
         'version': 1,
         'formatters': {'default': {
@@ -25,7 +27,7 @@ def create_app(test_config=None):
         }
     })
     # create and configure the app
-    app = Flask(__name__, instance_relative_config=True)
+    app = Flask(__name__, instance_path='/cati_portal/flask_instance', instance_relative_config=True)
     secret_key_file = osp.join(os.environ.get('CATI_PORTAL_DIR', '/cati_portal'), 'pgp', 'secret.key')
     app.secret_key = open(secret_key_file, 'rb').read()
     
@@ -36,7 +38,15 @@ def create_app(test_config=None):
         # load the test config if passed in
         app.config.from_mapping(test_config)
 
-    login = LoginManager(app)
+    login_manager = LoginManager(app)
+    login_manager.login_view = 'home.login'
+    
+    @login_manager.user_loader
+    def load_user(user_id):
+        user = User(user_id)
+        if user.login is None:
+            return None
+        return user
 
     from . import db
     db.init_app(app)

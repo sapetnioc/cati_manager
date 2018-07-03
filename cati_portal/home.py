@@ -1,12 +1,15 @@
 import os
 import os.path as osp
 
-from flask import Blueprint, render_template, url_for, redirect
+from flask import Blueprint, render_template, url_for, redirect, flash  
 from flask_wtf import FlaskForm
-from wtforms import StringField, PasswordField, SubmitField, validators
+from flask_login import current_user, login_user, login_required, logout_user
+from wtforms import StringField, PasswordField, HiddenField, SubmitField, validators
 from wtforms.widgets import HiddenInput
 
-from . import db
+from cati_portal.authentication import User
+from cati_portal import db
+from cati_portal.form import RedirectForm
 
 bp = Blueprint('home', __name__, url_prefix='/')
 
@@ -17,9 +20,30 @@ def main():
         return redirect(url_for('settings.install'))
     return render_template('home.html')
 
-@bp.route('/login')
+class LoginForm(RedirectForm):
+    login     = StringField('login', [validators.DataRequired()])
+    password = PasswordField('Password', validators=[validators.DataRequired()])
+    submit = SubmitField('Sign in')
+
+@bp.route('/login', methods=('GET', 'POST'))
 def login():
-    return render_template('home.html', title='Login')
+    if current_user.is_authenticated:
+        return redirect(url_for('home.main'))
+    form = LoginForm()
+    if form.validate_on_submit():
+        user = User(form.login.data)
+        if user.login is None or not user.check_password(form.password.data):
+            flash('Invalid username or password', 'warning')
+            return redirect(url_for('home.login'))
+        login_user(user)
+        return form.redirect('home.main')
+    return render_template('form_page.html', form=form, title='Sign in')
+
+@bp.route('/logout')
+@login_required
+def logout():
+    logout_user()
+    return redirect(url_for('home.main'))
 
 
 class RegistrationForm(FlaskForm):
@@ -40,4 +64,4 @@ def register():
     form.install_code.flags.hidden = True
     if form.validate_on_submit():
         return redirect(url_for('home.main'))
-    return render_template('register.html', form=form)
+    return render_template('form_page.html', form=form)

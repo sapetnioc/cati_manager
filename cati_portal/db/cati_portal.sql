@@ -6,26 +6,6 @@ CREATE SCHEMA cati_portal;
 
 SET search_path = cati_portal, public;
 
-CREATE TABLE column_properties
-(
-    table_name TEXT NOT NULL,
-    column_name TEXT NOT NULL,
-    properties JSONB,
-    PRIMARY KEY (table_name, column_name)
-);
-
--- CREATE TYPE log_action AS ENUM ('insert', 'update', 'delete');
--- 
--- CREATE TABLE log
--- (
---     time TIMESTAMP NOT NULL,
---     pg_schema TEXT NOT NULL,
---     pg_table TEXT NOT NULL,
---     action table_action,
---     project TEXT REFERENCES project,
---     item_id TEXT NOT NULL
--- );
-
 
 CREATE TABLE identity
 ( 
@@ -36,14 +16,9 @@ CREATE TABLE identity
     last_name TEXT,
     institution TEXT,
     registration_time TIMESTAMP,
-    email_verification_time TIMESTAMP
+    email_verification_time TIMESTAMP,
+    deactivation_time TIMESTAMP
 );
-INSERT INTO column_properties VALUES ('identity', 'password', '{"html_type": "password", "double_check": true}');
-INSERT INTO column_properties VALUES ('identity', 'email', '{"html_type": "email"}');
-INSERT INTO column_properties VALUES ('identity', 'first_name', '{"label": "first name"}');
-INSERT INTO column_properties VALUES ('identity', 'last_name', '{"label": "last name"}');
-INSERT INTO column_properties VALUES ('identity', 'registration_time', '{"visible": false}');
-INSERT INTO column_properties VALUES ('identity', 'email_verification_time', '{"visible": false}');
 
 CREATE TABLE pgp_public_keys ( name VARCHAR NOT NULL PRIMARY KEY, pgp_key BYTEA );
 
@@ -169,7 +144,7 @@ CREATE VIEW my_projects AS
     (SELECT g.project
         FROM granting g);
 
-INSERT INTO credential (project, id, name, description) VALUES ('cati_portal', 'server_admin', 'server administrator', 'A server administrator can put the server in maintenane mode and update the database schema and the software.');
+INSERT INTO credential (project, id, name, description) VALUES ('cati_portal', 'server_admin', 'server administrator', 'A server administrator can put the server in maintenane mode, modify its settings and update the database schema and the software.');
 INSERT INTO credential (project, id, name, description) VALUES ('cati_portal', 'user_moderator', 'user moderator', 'A user moderator can validate and invalidate user accounts.');
 GRANT USAGE ON SCHEMA cati_portal TO cati_portal$server_admin, cati_portal$user_moderator;
 GRANT SELECT, UPDATE, DELETE ON TABLE cati_portal.identity TO cati_portal$server_admin, cati_portal$user_moderator;
