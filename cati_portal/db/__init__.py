@@ -1,6 +1,8 @@
+import collections
 import os
 import pwd
 import threading
+import time
 
 from flask import current_app, g
 from flask_login import current_user
@@ -9,62 +11,86 @@ import psycopg2
 
 
 class UserConnectionPool:
-    def get_admin_connection(self):
-        cnx = psycopg2.connect(dbname=current_app.config['POSTGRES_DATABASE'],
-                               port=current_app.config['POSTGRES_PORT'])
-        return cnx
+    class ConnectionRecord:
+        def __init__(self, id, creation_time, last_used, connection):
+            self.id = id
+            self.creation_time = creation_time
+            self.last_used = last_used
+            self.connection = connection
     
-    def free_admin_connection(self, connection):
-        connection.close()
+    def __init__(self, max_connections=6):
+        self.lock = threading.RLock()
+        self.max_connections = max_connections
+        self.free = collections.deque()
+        self.in_use = collections.deque()
+        
+    def _get_connection(self, id, create_collection):
+        with self.lock:
+            for record in self.free:
+                if record.id == id:
+                    break
+            else:
+                record = None
+            if record is not None:
+                self.free.remove(record)
+                record.last_used = time.time()
+                self.in_use.append(record)
+                return record.connection
+            if len(self.free) + len(self.in_use) == self.max_connections:
+                if self.free:
+                    record = self.free.popleft()
+                    record.connection.close()
+                else:
+                    raise RuntimeError('All database connections are in use')
+            connection= create_collection(id)
+            record = self.ConnectionRecord(id=id,
+                                           creation_time=time.time(),
+                                           last_used=time.time(),
+                                           connection=connection)
+            self.in_use.append(record)
+            return record.connection
+
+    def _free_connection(self, connection):
+        with self.lock:
+            for record in self.in_use:
+                if record.connection == connection:
+                    break
+            else:
+                record = None
+            if record is not None:
+                self.in_use.remove(record)
+                record.last_used = time.time()
+                self.free.append(record)
     
-    def get_user_connection(self, login):
+    def _create_admin_connection(self, unused):
+        return psycopg2.connect(dbname=current_app.config['POSTGRES_DATABASE'],
+                                port=current_app.config['POSTGRES_PORT'])
+        
+    def _create_user_connection(self, login):
         from cati_portal.authentication import pgp_secret_key
+
         with _get_admin_cursor() as cur:
             sql = 'SELECT password FROM cati_portal.identity WHERE login=%s'
             cur.execute(sql, [login])
             encrypted = cur.fetchone()[0].tobytes()
             pg_password = pgp_secret_key().decrypt(pgpy.PGPMessage.from_blob(encrypted)).message[:-22].decode('UTF8')
-        cnx = psycopg2.connect(host=current_app.config['POSTGRES_HOST'],
-                               port=current_app.config['POSTGRES_PORT'],
-                               dbname=current_app.config['POSTGRES_DATABASE'],
-                               user=f'cati_portal${login}',
-                               password=pg_password)
-                         
-        return cnx
+            return psycopg2.connect(host=current_app.config['POSTGRES_HOST'],
+                                    port=current_app.config['POSTGRES_PORT'],
+                                    dbname=current_app.config['POSTGRES_DATABASE'],
+                                    user=f'cati_portal${login}',
+                                    password=pg_password)
     
+    def get_admin_connection(self):
+        return self._get_connection(None, self._create_admin_connection)
+    
+    def get_user_connection(self, login):
+        return self._get_connection(login, self._create_user_connection)
+        
+    def free_admin_connection(self, connection):
+        self._free_connection(connection)
+        
     def free_user_connection(self, login, connection):
-        connection.close()
-        
-        
-        
-    #def __enter__():
-        #user = current_user
-        #if user.is_authenticated and user.is_active:
-            #user_id = user.get_id()
-            #with self.lock:
-                #cnx = self.free_connections.pop(user_id, None)
-                #if cnx:
-                    #self.connections_in_use[user_id] = 
-            #if 'database_connection' not in g:
-                #g.database_connection = current_app.db_pool.getconn()
-                #g.database_connection_use_count = 1
-            #else:
-                #g.database_connection_use_count += 1
-            #return g.database_connection
-        #else:
-            #raise RuntimeError('insuficient rights to connect to the database')
-
-
-        #g.database_connection_use_count -= 1
-        #if g.database_connection_use_count == 0:
-            #if x is None:
-                #g.database_connection.commit()
-            #else:
-                #g.database_connection.rollback()
-            #current_app.db_pool.putconn(g.database_connection)
-            #del g.database_connection
-            #del g.database_connection_use_count
-
+        self._free_connection(connection)
 
 
 class WithDatabaseConnection:
