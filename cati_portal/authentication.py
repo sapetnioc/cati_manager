@@ -126,11 +126,3 @@ class User:
                 cur.execute(sql, [project, credential, self.login])
                 return (cur.fetchone()[0] == 1)
         return False
-    
-    
-if __name__ == '__main__':
-    # Create an installation password and store its hash representation
-    hash_file = osp.join(os.environ.get('CATI_PORTAL_DIR', '/cati_portal'), 'tmp', 'installation.hash')
-    installation_password = generate_password(16)
-    open(hash_file, 'wb').write(hash_password(installation_password))
-    print(installation_password, end='')

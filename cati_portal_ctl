@@ -6,13 +6,6 @@ import os.path as osp
 import sys
 import shutil
 import subprocess
-import string
-import time
-import tempfile
-try:
-    from secrets import choice
-except ImportError:
-    from random import choice
     
 import click
 
@@ -70,120 +63,34 @@ def check_output(cmd, input=None, **kwargs):
 @cli.command()
 @click.option('--delete-existing', is_flag=True)
 @click.option('--pg_port', default='5432')
-def new(delete_existing, pg_port):
+@click.option('--http_port', default='8080')
+def install(delete_existing, pg_port, http_port):
     directory = osp.dirname(osp.dirname(osp.abspath(__file__)))
     print('Creating new cati_portal instance in', directory)
     base_simg = osp.join(directory, 'base.simg')
     cati_portal_simg = osp.join(directory, 'cati_portal.simg')
-    venv = osp.join(directory, 'venv')
     git = osp.join(directory, 'git')
-    log = osp.join(directory, 'log')
-    run = osp.join(directory, 'run')
-    tmp = osp.join(directory, 'tmp')
-    pgp = osp.join(directory, 'pgp')
-    instance = osp.join(directory, 'flask_instance')
-    postgresql = osp.join(directory, 'postgresql')
-    
-    if delete_existing:
-        for path in (venv, postgresql, log, run, tmp, instance):
-            if osp.exists(path):
-                print('Delete', path)
-                if os.path.isdir(path):
-                    shutil.rmtree(path)
-                else:
-                    os.remove(path)
-    
-    if not osp.exists(tmp):
-        os.mkdir(tmp)
-    
-    singularity = Singularity()
+    venv = osp.join(directory, 'venv')
         
+    singularity = Singularity()
+
+    if delete_existing:
+        if osp.exists(venv):
+            print('Delete', venv)
+            shutil.rmtree(venv)
+
     singularity_dir =  osp.join(git, 'singularity')
     if not osp.exists(base_simg):
         check_call(['sudo', 'singularity', 'build', base_simg, osp.join(singularity_dir, 'base.recipe')], cwd=singularity_dir)
     if not osp.exists(cati_portal_simg):
         check_call(['sudo', 'singularity', 'build', cati_portal_simg, osp.join(singularity_dir, 'cati_portal.recipe')], cwd=singularity_dir)
 
-    
-    if not osp.exists(log):
-        os.mkdir(log)
-    if not osp.exists(run):
-        os.mkdir(run)
-    
-
-    #check_call(['git', 'clone', 'https://github.com/sapetnioc/cati_portal.git', git])
-    #check_call(['git', 'checkout', 'flask'], cwd=git)
-    
     if not osp.exists(venv):
         singularity(['python3', '-m', 'venv', '--system-site-packages', '/cati_portal/venv']) 
         pip = '/cati_portal/venv/bin/pip'
         singularity([pip, 'install', '--editable', git])
-                
-                
-    if not osp.exists(pgp):
-        os.mkdir(pgp)
-        pgp_tmp = tempfile.mkdtemp(prefix='pgp.', dir=tmp)
-        try:
-            c_pgp_tmp = osp.join('/cati_portal/tmp', osp.basename(pgp_tmp))
-            pgp_script = '''%echo Generating cati_portal PGP key
-%no-protection
-Key-Type: 1
-Subkey-Type: default
-Name-Real: cati_portal
-Name-Comment: no comment
-Name-Email: cati_portal@cati-neuroimaging.com
-Expire-Date: 0
-%commit
-%echo done
-'''
-            singularity(['gpg2', '--batch', '--gen-key', '--homedir', c_pgp_tmp], input=pgp_script)
-            singularity(['gpg2', '--list-keys', '--homedir', c_pgp_tmp])
-            public_key = singularity.output(['gpg2', '--homedir', c_pgp_tmp, '--export', 'cati_portal'])
-            public_key_file = osp.join(pgp, 'public.key')
-            open(public_key_file, 'wb').write(public_key)
-            import pgpy
-            key, other = pgpy.PGPKey.from_file(public_key_file)
-            secret_key = singularity.output(['gpg2', '--homedir', c_pgp_tmp, '--export-secret-keys', 'cati_portal'])
-            open(osp.join(pgp, 'secret.key'), 'wb').write(secret_key)
-        finally:
-            shutil.rmtree(pgp_tmp, ignore_errors=True)
-
-    if not osp.exists(postgresql):
-        singularity(['pg_ctl', 'initdb'])
-
-        conf_file = osp.join(postgresql, 'postgresql.conf')
-        conf = open(conf_file).read()
-        for f, r in (("#port = 5432", 'port = %s' % pg_port),
-                    ("#unix_socket_directories = '/var/run/postgresql'", "unix_socket_directories = '%s'" % run)):
-            new_conf = conf.replace(f, r)
-            if new_conf == conf:
-                raise ValueError('Cannot find "%s" in %s' % (f, conf_file))
-            conf = new_conf
-        open(conf_file, 'w').write(conf)
-
-        conf_file = osp.join(postgresql, 'pg_hba.conf')
-        print('''local   all             all                                     peer
-host    all             all             127.0.0.1/32            md5
-''', file=open(conf_file, 'w'))
         
-        singularity.start('cati_portal')
-        time.sleep(3)
-        try:
-            singularity(['createdb','-p', pg_port, 'cati_portal'])
-            singularity(['/cati_portal/venv/bin/python', '-m', 'cati_portal.db', 'dbname=cati_portal port=%s' % pg_port])
-        finally:
-            singularity.stop('cati_portal')
-    
-    if not osp.exists(instance):
-        os.mkdir(instance)
-        config_file = osp.join(instance, 'config.py')
-        print('''POSTGRES_HOST = 'localhost'
-POSTGRES_PORT = %s
-POSTGRES_DATABASE = 'cati_portal'
-''' % pg_port, file=open(config_file, 'w'))
-        
-    installation_password = singularity.output(['/cati_portal/venv/bin/python', '-m', 'cati_portal.authentication']).decode('UTF8')
-    print('Installation password =', installation_password)
+    singularity(['/cati_portal/venv/bin/python', '-m', 'cati_portal.install', str(delete_existing), pg_port, http_port])
         
 
 @cli.command()
