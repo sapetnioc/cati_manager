@@ -17,6 +17,7 @@ CREATE TABLE identity
     institution TEXT,
     registration_time TIMESTAMP,
     email_verification_time TIMESTAMP,
+    activation_time TIMESTAMP,
     deactivation_time TIMESTAMP
 );
 

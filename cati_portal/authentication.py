@@ -36,12 +36,12 @@ class User:
     @staticmethod
     def get(login):
         with _get_admin_cursor() as cur:
-            sql = 'SELECT email, first_name, last_name, institution, email_verification_time, deactivation_time FROM cati_portal.identity WHERE login = %s'
+            sql = 'SELECT email, first_name, last_name, institution, email_verification_time, activation_time, deactivation_time FROM cati_portal.identity WHERE login = %s'
             cur.execute(sql, [login])
             if cur.rowcount:
-                email, first_name, last_name, institution, activation_time, deactivation_time = cur.fetchone()
+                email, first_name, last_name, institution, email_verification_time, activation_time, deactivation_time = cur.fetchone()
                 is_authenticated = True
-                is_active = (activation_time is not None and deactivation_time is None)
+                is_active = (activation_time is not None and email_verification_time is not None and deactivation_time is None)
                 is_anonymous = False
                 return User(login=login,
                             email=email,
@@ -80,17 +80,6 @@ class User:
                     return check_password(password, hash)
         return False
     
-    def validate_email(self, time=None):
-        '''
-        Set email verification time for the current user. If no time is given, datetime.now() is used 
-        '''
-        if time is None:
-            time = datetime.datetime.now()
-        with _get_admin_cursor() as cur:
-            sql = 'UPDATE cati_portal.identity SET email_verification_time = %s WHERE login = %s'
-            cur.execute(sql, [time, self.login])
-
-
     def has_credential(self, required):
         '''
         Verify that the user has a credential
@@ -120,12 +109,15 @@ def install():
                                    first_name = form.first_name.data,
                                    last_name = form.last_name.data,
                                    institution = form.institution.data)
-                user.validate_email()
                 with _get_admin_cursor() as cur:
+                    time = datetime.datetime.now()
+                    sql = 'UPDATE cati_portal.identity SET activation_time = %s, email_verification_time = %s WHERE login = %s;'
+                    cur.execute(sql, [time, time, user.login])
                     sql = 'INSERT INTO cati_portal.granting (login, project, credential) VALUES (%s, %s, %s);'
                     cur.executemany(sql, [[user.login, 'cati_portal', 'server_admin'],
                                            [user.login, 'cati_portal', 'user_moderator']])
-                flash(f'Administrator {form.login.data} succesfully registered and validated', 'success')
+                flash(f'Administrator {form.login.data} succesfully registered and activated with server and user management rights', 'success')
+                user = User.get(user.login)
                 login_user(user)
                 os.remove(hash_file)
                 return redirect(url_for('settings.settings'))
