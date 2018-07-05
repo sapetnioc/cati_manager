@@ -9,6 +9,7 @@ from flask_login import current_user
 import pgpy
 import psycopg2
 
+from cati_portal.encryption import pgp_secret_key
 
 class UserConnectionPool:
     class ConnectionRecord:
@@ -67,8 +68,6 @@ class UserConnectionPool:
                                 port=current_app.config['POSTGRES_PORT'])
         
     def _create_user_connection(self, login):
-        from cati_portal.authentication import pgp_secret_key
-
         with _get_admin_cursor() as cur:
             sql = 'SELECT password FROM cati_portal.identity WHERE login=%s'
             cur.execute(sql, [login])

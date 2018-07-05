@@ -16,8 +16,8 @@ import pgpy
 import psycopg2
 
 from cati_portal.migration import sql_changesets
-from cati_portal.authentication import (pgp_public_key, generate_password,
-                                        hash_password)
+from cati_portal.encryption import (pgp_public_key, generate_password,
+                                    hash_password)
 
 def install(delete_existing, pg_port, http_port):
     # This function must be called from within a container where the base

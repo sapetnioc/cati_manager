@@ -33,14 +33,14 @@
             </div>
             <div id="navbarCollapse" class="collapse navbar-collapse">
                 <ul class="nav navbar-nav">
-                    <li><a href="{{url_for('home.main')}}"><i class="glyphicon glyphicon-home"></i></a></li>
+                    <li><a href="{{url_for('home.index')}}"><i class="glyphicon glyphicon-home"></i></a></li>
                 </ul>
                 <ul class="nav navbar-nav navbar-right">
                     {%- if current_user.is_authenticated %}
                     <li><a href="#"><span class="glyphicon glyphicon-user"></span> {{current_user.username}} </a></li>
-                    <li><a href="{{url_for('home.logout')}}"><span class="glyphicon glyphicon-log-out"></span> Logout&nbsp;</a></li>
+                    <li><a href="{{url_for('authentication.logout')}}"><span class="glyphicon glyphicon-log-out"></span> Logout&nbsp;</a></li>
                     {%- else -%}
-                    <li><a href="{{url_for('home.login')}}"><span class="glyphicon glyphicon-log-in"></span> Login&nbsp;</a></li>
+                    <li><a href="{{url_for('authentication.login')}}"><span class="glyphicon glyphicon-log-in"></span> Login&nbsp;</a></li>
                     {% endif -%}
                 </ul>
             </div>

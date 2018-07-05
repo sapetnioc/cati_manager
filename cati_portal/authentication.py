@@ -1,96 +1,73 @@
-import base64
-try:
-    from secret import choice
-except:
-    from random import choice
-    import datetime 
-import hashlib
-import json
+import datetime 
 import os
 import os.path as osp
-import string
 
+from flask import Blueprint, render_template, url_for, redirect, flash, abort
+from flask_wtf import FlaskForm
+from flask_login import current_user, login_user, login_required, logout_user
 import pgpy
-from flask import current_app, g
-from flask_login import UserMixin
-
-
-
-password_characters = string.ascii_letters + string.digits
-def generate_password(size):
-    return ''.join(choice(password_characters) for i in range(size))
-
-
-def pgp_secret_key():
-    default_key_file = osp.join(os.environ.get('CATI_PORTAL_DIR', '/cati_portal'), 'pgp', 'secret.key')
-    if current_app:
-        secret_key_file = current_app.config.get('PGP_SECRET_KEY', default_key_file)
-    else:
-        secret_key_file = default_key_file
-    if osp.exists(secret_key_file):
-        pgp_secret_key, other = pgpy.PGPKey.from_file(secret_key_file)
-        return pgp_secret_key
-    raise FileNotFoundError('Cannot find pgp secret key file')
-
-
-def pgp_public_key():
-    default_key_file = osp.join(os.environ.get('CATI_PORTAL_DIR', '/cati_portal'), 'pgp', 'public.key')
-    if current_app:
-        public_key_file = current_app.config.get('PGP_PUBLIC_KEY', default_key_file)
-    else:
-        public_key_file = default_key_file
-    if osp.exists(public_key_file):
-        pgp_public_key, other = pgpy.PGPKey.from_file(public_key_file)
-        return pgp_public_key
-    raise FileNotFoundError('Cannot find pgp public key file')
-
-
-def hash_password(password):
-    public_key = pgp_public_key()
-    salted = pgpy.PGPMessage.new((password + generate_password(22)).encode('UTF8'), sensitive=True, format='b')
-    return bytes(public_key.encrypt(salted))
-
-
-def check_password(password, hash):
-    secret_key = pgp_secret_key()
-    # Salt length is 22 bytes
-    pwd = secret_key.decrypt(pgpy.PGPMessage.from_blob(hash)).message[:-22].decode('UTF8')
-    return password == pwd
+from wtforms import StringField, PasswordField, HiddenField, SubmitField, validators
+from wtforms.widgets import HiddenInput
 
 from cati_portal.db import _get_admin_cursor
+from cati_portal.encryption import check_password
+from cati_portal.form import RedirectForm
+
+bp = Blueprint('authentication', __name__, url_prefix='/authentication')
+
+class LoginForm(RedirectForm):
+    login     = StringField('login', [validators.DataRequired()])
+    password = PasswordField('Password', validators=[validators.DataRequired()])
+    submit = SubmitField('Sign in')
 
 class User:
-    def __init__(self, login):
+    def __init__(self, login, email, first_name, last_name, institution,
+                 is_authenticated, is_active, is_anonymous):
+        self.login = login
+        self.email = email
+        self.first_name = first_name
+        self.last_name = last_name
+        self.institution = institution
+        self.is_authenticated = is_authenticated
+        self.is_active = is_active
+        self.is_anonymous = is_anonymous
+    
+    
+    @staticmethod
+    def get(login):
         with _get_admin_cursor() as cur:
             sql = 'SELECT email, first_name, last_name, institution, email_verification_time, deactivation_time FROM cati_portal.identity WHERE login = %s'
             cur.execute(sql, [login])
             if cur.rowcount:
-                self.login = login
-                self.email, self.first_name, self.last_name, self.institution, activation_time, deactivation_time = cur.fetchone()
-                self.is_authenticated = True
-                self.is_active = (activation_time is not None and deactivation_time is None)
-                self.is_anonymous = False
-                return
-        self.login = None
-        self.email = self.first_name = self.last_name = self.institution = None
-        self.is_authenticated = False
-        self.is_active = False
-        self.is_anonymous = True
+                email, first_name, last_name, institution, activation_time, deactivation_time = cur.fetchone()
+                is_authenticated = True
+                is_active = (activation_time is not None and deactivation_time is None)
+                is_anonymous = False
+                return User(login=login,
+                            email=email,
+                            first_name=first_name,
+                            last_name=last_name,
+                            institution=institution,
+                            is_authenticated=is_authenticated,
+                            is_active=is_active,
+                            is_anonymous=is_anonymous)
+        return None
     
     @staticmethod
-    def new(login, password, email, first_name=None, last_name=None, institution=None):
+    def create(login, password, email, first_name=None, last_name=None, institution=None):
         '''
         Create a new user in the database
         '''
         with _get_admin_cursor() as cur:
             sql = 'INSERT INTO cati_portal.identity(login, password, email, first_name, last_name, institution) VALUES (%s, %s, %s, %s, %s, %s)'
             cur.execute(sql, [login, password, email, first_name, last_name, institution])
-        return User(login)
+        return User.get(login)
     
+
     def get_id(self):
         return self.login
     
-    def check_password(self, password_to_check):
+    def check_password(self, password):
         '''
         Check the password of a user
         '''
@@ -99,9 +76,8 @@ class User:
                 sql = 'SELECT password FROM cati_portal.identity WHERE login = %s'
                 cur.execute(sql, [self.login])
                 if cur.rowcount == 1:
-                    encrypted = cur.fetchone()[0].tobytes()
-                    pwd = pgp_secret_key().decrypt(pgpy.PGPMessage.from_blob(encrypted)).message[:-22].decode('UTF8') # Salt length is 22 bytes
-                    return pwd == password_to_check
+                    hash = cur.fetchone()[0].tobytes()
+                    return check_password(password, hash)
         return False
     
     def validate_email(self, time=None):
@@ -115,7 +91,10 @@ class User:
             cur.execute(sql, [time, self.login])
 
 
-    def check_credential(self, required):
+    def has_credential(self, required):
+        '''
+        Verify that the user has a credential
+        '''
         if self.is_active:
             l = required.split('.', 1)
             if len(l) != 2:
@@ -126,3 +105,71 @@ class User:
                 cur.execute(sql, [project, credential, self.login])
                 return (cur.fetchone()[0] == 1)
         return False
+
+@bp.route('/install', methods=('GET', 'POST'))
+def install():
+    hash_file = osp.join(os.environ.get('CATI_PORTAL_DIR', '/cati_portal'), 'tmp', 'installation.hash')
+    if osp.exists(hash_file):
+        form = RegistrationForm()
+        if form.validate_on_submit():
+            hash = open(hash_file, 'rb').read()
+            if check_password(form.install_code.data, hash):
+                user = User.create(login = form.login.data,
+                                   email = form.email.data,
+                                   password = form.password.data,
+                                   first_name = form.first_name.data,
+                                   last_name = form.last_name.data,
+                                   institution = form.institution.data)
+                user.validate_email()
+                with _get_admin_cursor() as cur:
+                    sql = 'INSERT INTO cati_portal.granting (login, project, credential) VALUES (%s, %s, %s);'
+                    cur.executemany(sql, [[user.login, 'cati_portal', 'server_admin'],
+                                           [user.login, 'cati_portal', 'user_moderator']])
+                flash(f'Administrator {form.login.data} succesfully registered and validated', 'success')
+                login_user(user)
+                os.remove(hash_file)
+                return redirect(url_for('settings.settings'))
+            flash('Invalid installation code', 'danger')
+        return render_template('form_page.html', title='Administrator registration', form=form)
+    abort(404)
+
+@bp.route('/login', methods=('GET', 'POST'))
+def login():
+    if current_user.is_authenticated:
+        return redirect(url_for('home.index'))
+    form = LoginForm()
+    if form.validate_on_submit():
+        user = User.get(form.login.data)
+        if user is None or not user.check_password(form.password.data):
+            flash('Invalid username or password', 'warning')
+            return redirect(url_for('authentication.login'))
+        login_user(user)
+        return form.redirect('home.index')
+    return render_template('form_page.html', form=form, title='Sign in')
+
+@bp.route('/logout')
+@login_required
+def logout():
+    logout_user()
+    return redirect(url_for('home.index'))
+
+
+class RegistrationForm(FlaskForm):
+    login     = StringField('login', [validators.DataRequired(), validators.Length(min=4, max=25)], render_kw=dict(size=32))
+    email        = StringField('Email Address', [validators.DataRequired(), validators.Email()])
+    password = PasswordField('Password', validators=[validators.DataRequired(), validators.EqualTo('confirm_password', message='Passwords does not match')])
+    confirm_password = PasswordField('Confirm password', validators=[validators.DataRequired()])
+    first_name = StringField('First name', [validators.Length(max=40)])
+    last_name = StringField('Last name', [validators.Length(max=40)])
+    institution = StringField('Institution', [validators.Length(max=40)])
+    install_code = StringField('Installation code', [validators.Length(max=16)])
+    submit = SubmitField('Register')
+
+@bp.route('/register', methods=('GET', 'POST'))
+def register():
+    form = RegistrationForm()
+    form.install_code.widget = HiddenInput()
+    form.install_code.flags.hidden = True
+    if form.validate_on_submit():
+        return redirect(url_for('home.index'))
+    return render_template('form_page.html', form=form)

@@ -6,7 +6,7 @@
 <div class="content">
   <h1>{{title}}</h1>
   {%- if not current_user.is_authenticated %}
-  <p>You must <a href="{{url_for('home.login')}}">login</a> to use this web site. If you do not already have an account, you can <a href="{{url_for('home.register')}}">register</a>.</p>
+  <p>You must <a href="{{url_for('authentication.login')}}">login</a> to use this web site. If you do not already have an account, you can <a href="{{url_for('authentication.register')}}">register</a>.</p>
 {#  {%- elif not request.has_permission('cati_manager_valid_user') -%}
   Your account is not validated yet. You will receive an email when a moderator take a decision about your registration request.
 #}  {%- else -%}
