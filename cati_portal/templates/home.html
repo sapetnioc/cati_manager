@@ -5,22 +5,44 @@
 {% block content %}
 <div class="content">
   <h1>{{title}}</h1>
-  {%- if not current_user.is_authenticated %}
-  <p>You must <a href="{{url_for('authentication.login')}}">login</a> to use this web site. If you do not already have an account, you can <a href="{{url_for('authentication.register')}}">register</a>.</p>
-{#  {%- elif not request.has_permission('cati_manager_valid_user') -%}
-  Your account is not validated yet. You will receive an email when a moderator take a decision about your registration request.
-#}  {%- else -%}
-  {{ current_user.username }}
-  {%- for d in dashboards %}
-    {%- import 'data/' + d.item_type + '.jinja2' as data_type with context -%}
-    <h2>{{data_type.title()|safe}}</h2>
-    {%- set form_index = loop.index -%}
-    {% for item in d['items'] %}
-      {%- set item_id = 'item_' ~ form_index ~ '_' ~ loop.index -%}
-      {{data_type.item(item, item_id)|safe}}
-    {% endfor -%}
-  {%- endfor -%}
-  {% endif %}
+  {% if not current_user.is_authenticated -%}
+    <p>You must <a href="{{url_for('authentication.login')}}">login</a> to use this web site. If you do not already have an account, you can <a href="{{url_for('authentication.register')}}">register</a>.</p>
+  {%- else -%}
+    {% if current_user.has_credential('cati_portal.user_moderator') %}
+        {% set users_info = namespace(active=0, inactive=0, others=[]) %}
+        {% for user in users.list() %}
+            {% if user.is_active %}
+                {% set users_info.active = users_info.active + 1 %} 
+            {% elif user.email_verification_time == none or  user.activation_time == none %}
+                {% do users_info.others.append(user) %}
+            {% else %}
+                {% set users_info.inactive = users_info.inactive + 1 %} 
+            {% endif %}
+        {% endfor %}
+        <h2>User moderation</h2>
+        <p>{{users_info.active}} active user</p>
+        <p>{{users_info.inactive}} inactive user</p>
+        {% if users_info.others %}
+            <table class="table">
+            <thead>
+            <tr><th>login</th><th>email</th><th>first name</th><th>last name</th><th>registration</th><th>email verification</th><th>activation</th><th>deactivation</th></tr>
+            </thead>
+            <tbody>
+            {% for user in users_info.others %}
+            <tr>
+            <td>{{user.login}} <button class="btn btn-danger btn-xs" data-toggle="tooltip" title="Delete user {{user.login}}" onclick="delete_user('{{user.login}}','{{url_for('authentication.delete_user', login=user.login)}}')"><span class="glyphicon glyphicon-remove" aria-hidden="true"></span></button></td>
+            <td>{{user.email}}</td>
+            <td>{{user.first_name}}</td>
+            <td>{{user.last_name}}</td>
+            <td>{{user.registration_time}}</td>
+            <td>{%if user.email_verification_time%}{{user.email_verification_time}}{%else%}<button class="btn btn-warning btn-xs" data-toggle="tooltip" title="Validate email {{user.email}} for login {{user.login}}" onclick="validate_email('{{user.login}}','{{user.email}}','{{url_for('authentication.modify_user', login=user.login)}}', true)"><span class="glyphicon glyphicon-ok" aria-hidden="true"></span></button>{%endif%}</td>
+            <td>{%if user.activation_time%}{{user.activation_time}}{%else%}<button class="btn btn-warning btn-xs" data-toggle="tooltip" title="Activate user {{user.login}}" onclick="activate_user('{{user.login}}','{{url_for('authentication.modify_user', login=user.login)}}', true)"><span class="glyphicon glyphicon-ok" aria-hidden="true"></span></button>{%endif%}</td>
+            <td>{{user.deactivation_time or ''}}</td></tr>        
+            {% endfor %}
+            </table>
+        {% endif %}
+    {% endif %}
+  {%- endif %}
 </div>
 {% endblock content %}
 

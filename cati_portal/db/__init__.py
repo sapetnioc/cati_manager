@@ -145,7 +145,7 @@ def get_cursor():
     with get_admin_cursor() as cur:
         cur.execute(...)
     '''
-    return WithDatabaseCursor()
+    return WithDatabaseCursor(current_user.get_id())
 
 def _get_admin_db():
     return WithDatabaseConnection(None)
@@ -156,7 +156,5 @@ def _get_admin_cursor():
 
 def init_app(app):
     app.db_pool = UserConnectionPool()
-    #login = pwd.getpwuid(os.getuid()).pw_name
-    #app.db_pool = ThreadedConnectionPool(0, 5, app.config['DATABASE'], requirepeer=login)
     
 

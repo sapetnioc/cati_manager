@@ -12,7 +12,7 @@ bp = Blueprint('settings', __name__, url_prefix='/settings')
 
 
 class SettingsForm(FlaskForm):
-    login     = StringField('smtp_server')
+    smtp_server = StringField('smtp_server')
     submit = SubmitField('Save settings')
 
 @bp.route('')

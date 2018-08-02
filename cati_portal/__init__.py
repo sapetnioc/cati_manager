@@ -1,7 +1,7 @@
+from functools import partial
 import logging.config
 import os
 import os.path as osp
-
 
 def create_app(test_config=None):
     # Some submodules are used in an environement without thirdparty module installed.
@@ -41,13 +41,16 @@ def create_app(test_config=None):
     login_manager = LoginManager(app)
     login_manager.login_view = 'authentication.login'
     
-    login_manager.user_loader(User.get)
+    login_manager.user_loader(partial(User.get, bypass_access_rights=True))
+
+    app.jinja_env.add_extension('jinja2.ext.do')
 
     from . import db
     db.init_app(app)
     
     from . import authentication
     app.register_blueprint(authentication.bp)
+    app.jinja_env.globals['users'] = authentication.Users()
 
     from . import home
     app.register_blueprint(home.bp)
