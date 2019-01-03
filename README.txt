@@ -6,7 +6,7 @@ Getting Started
 
 - Install dependencies
 
-    sudo apt install git python3 python3-click singularity-container
+    sudo apt install git python3 python3-click singularity-container debootstrap
 
 - Create a new directory for hosting an instance of the portal (everything 
   the instance will create goes into that directory)
@@ -25,7 +25,7 @@ Getting Started
 
 - Install a new portal
 
-    cati_portal/git/cati_portal_ctl new
+    cati_portal/git/cati_portal_ctl install
 
 - Start the portal
 
