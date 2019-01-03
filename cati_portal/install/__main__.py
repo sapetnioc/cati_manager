@@ -117,11 +117,13 @@ host    all             all             127.0.0.1/32            md5
     
     if not osp.exists(instance):
         os.mkdir(instance)
-        config_file = osp.join(instance, 'config.py')
-        print('''POSTGRES_HOST = 'localhost'
-POSTGRES_PORT = '%s'
-POSTGRES_DATABASE = 'cati_portal'
-HTTP_PORT = '%s'
+        config_file = osp.join(instance, 'config.json')
+        print('''{
+    "POSTGRES_HOST": "localhost",
+    "POSTGRES_PORT": "%s",
+    "POSTGRES_DATABASE": "cati_portal",
+    "HTTP_PORT": "%s"
+}
 ''' % (pg_port, http_port), file=open(config_file, 'w'))
     
     # Create an installation password and store its hash representation
