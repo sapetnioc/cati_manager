@@ -1,0 +1,28 @@
+{% extends "layout.jinja2" %}
+{% block content %}
+
+{% if message -%}
+<center><font color="red">{{ message|e }}</font></color><br/>
+{%- endif %}
+<form class="form-horizontal" action="{{ url }}" method="post">
+    <input type="hidden" name="came_from"
+         value="{{ came_from }}"/>
+    <div class="form-group">
+        <label class="col-xs-2 control-label" for="login">Login or email:&nbsp;</label>
+        <div class="col-xs-10 col-sm-9">
+            <input name="login" type="text" class="form-control"/>
+        </div>
+    </div>
+    <div class="form-group">
+        <label class="col-xs-2 control-label" for="password">Password:&nbsp;</label>
+        <div class="col-xs-10 col-sm-9">
+            <input name="password" type="password" class="form-control"/>
+        </div>
+    </div>
+    <div class="form-group">
+        <div class="col-xs-offset-2 col-xs-10 col-sm-9">
+            <button type="submit" class="btn btn-default">Login</button>
+        </div>
+    </div>
+</form>
+{% endblock content %}

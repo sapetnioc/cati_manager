@@ -1,0 +1,9 @@
+{% extends "layout.html" -%}
+{% block title %}{{title|default('Registration')}}{% endblock title -%}
+{% block content -%}
+<h1>{{title}}</h1>
+{% if message -%}
+<center><font color="red">{{ message|e }}</font></color><br/>
+{%- endif %}
+{%- include 'form.html' %}
+{%- endblock content %}

@@ -1,0 +1,247 @@
+{% extends "layout.jinja2" %}
+{% block content %}
+
+{%- if message %}
+<center><font color="red">{{ message|e }}</font></color><br/>
+{% endif -%}
+
+
+<a href="#" id="browseButton">Select files</a>
+{% endblock content %}
+
+{% block script %}
+<script src="{{request.static_url('cati_manager:static/js/resumable.js')}}"></script>
+<script src="resumable.js"></script>
+<script>
+var r = new Resumable({
+  target: '/upload_chunk'
+});
+r.assignBrowse(document.getElementById('browseButton'));
+r.on('fileSuccess', function(file){
+    console.debug('fileSuccess',file);
+  });
+r.on('fileProgress', function(file){
+    console.debug('fileProgress', file);
+  });
+r.on('fileAdded', function(file, event){
+    r.upload();
+    console.debug('fileAdded', event);
+  });
+r.on('filesAdded', function(array){
+    r.upload();
+    console.debug('filesAdded', array);
+  });
+r.on('fileRetry', function(file){
+    console.debug('fileRetry', file);
+  });
+r.on('fileError', function(file, message){
+    console.debug('fileError', file, message);
+  });
+r.on('uploadStart', function(){
+    console.debug('uploadStart');
+  });
+r.on('complete', function(){
+    console.debug('complete');
+  });
+r.on('progress', function(){
+    console.debug('progress');
+  });
+r.on('error', function(message, file){
+    console.debug('error', message, file);
+  });
+r.on('pause', function(){
+    console.debug('pause');
+  });
+r.on('cancel', function(){
+    console.debug('cancel');
+  });
+</script>
+{% endblock script %}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<!--<input type="file" id="files" name="files[]" multiple />
+<div id="drop_zone">Drop files here</div>
+<output id="list"></output>
+<button onclick="startUpload();">Start upload</button>
+
+<script>
+  var selected_files = {};
+  var file_readers = {};
+//   function handleFileSelect(evt) {
+//     var files = evt.target.files; // FileList object
+// 
+//     // files is a FileList of File objects. List some properties.
+//     var output = [];
+//     for (var i = 0, f; f = files[i]; i++) {
+//       
+//       output.push('<li><strong>', escape(f.name), '</strong> (', f.type || 'n/a', ') - ',
+//                   f.size, ' bytes, last modified: ',
+//                   f.lastModifiedDate ? f.lastModifiedDate.toLocaleDateString() : 'n/a',
+//                   '</li>');
+//     }
+//     document.getElementById('list').innerHTML = '<ul>' + output.join('') + '</ul>';
+//   }
+function showSelectedFiles() {
+    // files is a FileList of File objects. List some properties.
+    var output = [];
+    for (var i in selected_files) {
+      var f = selected_files[i];
+      output.push('<li><strong>', escape(f.name), '</strong> (', f.type || 'n/a', ') - ',
+                  f.size, ' bytes, last modified: ',
+                  f.lastModifiedDate ? f.lastModifiedDate.toLocaleDateString() : 'n/a',
+                  ' <div class="progress" style="; display:none" id="', i, 
+                  '"><div class="progress-bar" role="progressbar" aria-valuenow="0" aria-valuemin="0" aria-valuemax="',
+                  f.size, '" style="width:0%">0%</div></div></li>');
+    }
+    document.getElementById('list').innerHTML = '<ul>' + output.join('') + '</ul>';
+}
+  
+function handleFileSelect(evt) {
+    var files = evt.target.files; // FileList object
+
+    // files is a FileList of File objects. List some properties.
+    selected_files = {}
+    var output = [];
+    for (var i = 0, f; f = files[i]; i++) {
+        selected_files['file_'+i] = f;
+    }
+    showSelectedFiles();
+}
+  
+function handleFileDrop(evt) {
+    evt.stopPropagation();
+    evt.preventDefault();
+
+    var files = evt.dataTransfer.files; // FileList object.
+
+    // files is a FileList of File objects. List some properties.
+    selected_files = {}
+    for (var i = 0, f; f = files[i]; i++) {
+        selected_files['file_'+i] = f;
+    }
+    showSelectedFiles();
+}
+
+function handleDragOver(evt) {
+    evt.stopPropagation();
+    evt.preventDefault();
+    evt.dataTransfer.dropEffect = 'copy'; // Explicitly show this is a copy.
+}
+
+function errorHandler(id, evt) {
+    switch(evt.target.error.code) {
+      case evt.target.error.NOT_FOUND_ERR:
+        alert('File Not Found!');
+        break;
+      case evt.target.error.NOT_READABLE_ERR:
+        alert('File is not readable');
+        break;
+      case evt.target.error.ABORT_ERR:
+        break; // noop
+      default:
+        alert('An error occurred reading this file.');
+    };
+  }
+
+function updateProgress(id, evt) {
+    if (evt.lengthComputable) {
+        var percent = Math.round((evt.loaded / evt.total) * 100);
+        document.getElementById(x).children[0].style.width = percent + '%'
+    }
+}
+
+function loadComplete(id, evt) {
+    var xhr = new XMLHttpRequest();
+//     xhr.upload.addEventListener("progress", function (evt) {
+//         if (evt.lengthComputable) {
+//             progressBar.style.width = (evt.loaded / evt.total) * 100 + "%";
+//         }
+//         else {
+//             // No data to calculate on
+//         }
+//     }, false);
+//     xhr.addEventListener("load", function () {
+//         progressBarContainer.className += " uploaded";
+//         progressBar.innerHTML = "Uploaded!";
+//     }, false);
+    var file = selected_files[id];
+//     xhr.open("post", "/upload", true);
+    // Set appropriate headers
+//     xhr.setRequestHeader("Content-Type", "multipart/form-data");
+//     xhr.setRequestHeader("X-File-Name", file.name);
+//     xhr.setRequestHeader("X-File-Size", file.size);
+//     xhr.setRequestHeader("X-File-Type", file.type);
+    // Send the file (doh)
+//     xhr.send(evt.target.result);
+      $.ajax({
+          dataType: 'json',
+          type: 'POST',
+          url: '/upload',
+          data: {"file_content":evt.target.result},
+          success: function(resp, status, xhr) {
+            return false;
+          },
+      }).fail(function(jqXHR, textStatus, errorThrown) {
+        document.open();
+        document.write(jqXHR.responseText);
+        document.close();
+      });
+}
+
+
+function startUpload() {
+    for (var i in selected_files) {
+        var f = selected_files[i];
+        reader = new FileReader();
+        file_readers[i] = reader;
+//         reader.onerror = errorHandler;
+        reader.onprogress = function(x) {return function(e) {updateProgress(x,e);};}(i);
+//         reader.onabort = function(e) {
+//             alert('File read cancelled');
+//         };
+        reader.onloadstart = function(x) {return function(e) {
+            document.getElementById(x).style.display = 'inherit';
+        };}(i);
+        reader.onload = function(x) {return function(e) {
+            loadComplete(x, e);
+        };}(i);
+//         reader.onload = function(e) {
+//             // Ensure that the progress bar displays 100% at the end.
+//             progress.style.width = '100%';
+//             progress.textContent = '100%';
+//             setTimeout("document.getElementById('progress_bar').className='';", 2000);
+//         }
+        reader.readAsBinaryString(f);
+    }
+}
+
+document.getElementById('files').addEventListener('change', handleFileSelect, false);
+var dropZone = document.getElementById('drop_zone');
+dropZone.addEventListener('dragover', handleDragOver, false);
+dropZone.addEventListener('drop', handleFileDrop, false);
+
+</script>
+
+
+{ % endblock content %}-->

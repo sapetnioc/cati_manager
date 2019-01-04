@@ -1,0 +1,26 @@
+body { 
+   padding-top: 70px;/*top nav bar is 50px*/
+   padding-bottom : 50px;
+}
+i {
+   color:rgb(102,178,255);/*102,178,255 : light blue*/
+}
+/*.navbar-brand {
+    max-height: 40px;
+    max-width: 100px;
+    overflow: visible;
+    padding-top: 8px;
+}
+
+.dl-horizontal dt {
+  float: left;
+  width: 300px;
+  overflow: hidden;
+  clear: left;
+  text-align: center;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.dl-horizontal dd {
+  margin-left: 320px;
+}*/

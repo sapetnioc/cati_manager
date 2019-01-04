@@ -1,0 +1,51 @@
+{% extends "layout.jinja2" %}
+{% block content -%}
+
+<h1>Administration page</h1>
+
+<h2>Maintenance</h2>
+{% if database_connections -%}
+{%- for cnx in database_connections -%}
+<p>User <strong>{{cnx.login}}</strong> connected since {{cnx.backend_start.isoformat(' ')}}</p>
+{%- endfor %}
+{%- endif %}
+
+<form class="form-horizontal" action="/maintenance" method="post">
+{% if maintenance -%}
+Maintenance activated until {{maintenance.maintenance_end}}.
+Message : "{{maintenance.message}}"
+<div class="form-group">
+    <div class="col-xs-offset-2 col-xs-10 col-sm-9">
+        <button type="submit" class="btn btn-success">Stop maintenance</button>
+    </div>
+</div>
+{%- else -%}
+    <div class="form-group">
+        <label class="col-xs-2 control-label" for="message">Message:&nbsp;</label>
+        <div class="col-xs-10 col-sm-9">
+            <input name="message" type="text" class="form-control"/>
+        </div>
+    </div>
+    
+
+    <div class="form-group">
+        <label class="col-xs-2 control-label" for="maintenance_end">Estimated end of maintenance:&nbsp;</label>
+        <div class="col-xs-10 col-sm-9">
+            <input id="maintenance_end" name="maintenance_end" type="text" class="form-control" />
+        </div>
+    </div>
+        
+    <div class="form-group">
+        <div class="col-xs-offset-2 col-xs-10 col-sm-9">
+            <button type="submit" class="btn btn-danger">Start maintenance</button>
+        </div>
+    </div>
+</form>
+{%- endif %}
+
+{%- endblock content %}
+{% block script %}
+<script type="text/javascript">
+    $('#maintenance_end').datepicker({dateFormat: "yy-mm-dd"});
+</script>
+{% endblock %}

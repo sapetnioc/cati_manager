@@ -1,0 +1,14 @@
+{% extends "layout.jinja2" %}
+{% block content %}
+<h1>Test database administration</h1>
+
+<h2>Schema templates</h2>
+{% for st in schema_templates %}
+    <p><strong>{{st.name}} :</strong>{{st.path}} (required version =  {{st.required_version}})</p>
+{% endfor %}
+
+<h2>Installed schemas</h2>
+{% for is in installed_schemas %}
+    <p><strong>{{is.database_schema}} :</strong>{{is.project}}.{{is.component}} version {{is.installed_version or 'devel'}}</p>
+{% endfor %}
+{% endblock content %}
