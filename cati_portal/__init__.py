@@ -50,7 +50,6 @@ def create_app(test_config=None):
     
     from . import authentication
     app.register_blueprint(authentication.bp)
-    app.jinja_env.globals['users'] = authentication.Users()
 
     from . import home
     app.register_blueprint(home.bp)
