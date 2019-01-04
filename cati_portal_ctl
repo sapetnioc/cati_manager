@@ -1,6 +1,7 @@
 #! /usr/bin/env python3
 
 import glob
+import json
 import os
 import os.path as osp
 import sys
@@ -36,8 +37,24 @@ class Singularity:
             os.remove(f)
 
     def shell(self, name):
-        check_call(['singularity', 'shell', 'instance://%s' % name],
-                   env=self.env)
+        instance_name = 'instance://%s' % name
+        
+        # Check if the instance is running
+        running = False
+        process = subprocess.Popen(['singularity', 'instance.list', '-j'], stdout=subprocess.PIPE)
+        output, unused_err = process.communicate()
+        for d in json.loads(output.decode('utf-8'))['instances']:
+            if d['instance'] == instance_name:
+                running = True
+                break
+        
+        if running:
+            check_call(['singularity', 'shell', instance_name],
+                    env=self.env)
+        else:
+            check_call(['singularity', 'shell',  '-B', '%s:/cati_portal' % self.directory, self.simg],
+                    env=self.env)
+            
 
 
 @click.group()
