@@ -1,0 +1,9 @@
+{% extends "layout.html" %}
+
+{% block content %}
+<div class="content">
+  <h1>{{title}}</h1>
+    {%- import 'users.jinja2' as users_tpl -%}
+    {{users_tpl.user_list_admin(users.list())}}
+</div>
+{% endblock content %}

@@ -55,3 +55,43 @@ function activate_user(login, user_url, ask=false) {
         })
     }
 }
+
+function disable_user(login, user_url, ask=false) {
+    if (! ask || confirm('Disable user '+ login + ' ?') == true) {
+        $.ajax({
+            url: user_url,
+            method: 'PUT',
+            data: {
+                deactivation: true,
+            }
+        })
+        .done(function() {  
+            location.reload();
+        })
+        .fail(function (jqXHR) {
+            document.open();
+            document.write(jqXHR.responseText);
+            document.close();
+        })
+    }
+}
+
+function enable_user(login, user_url, ask=false) {
+    if (! ask || confirm('Enable user '+ login + ' ?') == true) {
+        $.ajax({
+            url: user_url,
+            method: 'PUT',
+            data: {
+                deactivation: false,
+            }
+        })
+        .done(function() {  
+            location.reload();
+        })
+        .fail(function (jqXHR) {
+            document.open();
+            document.write(jqXHR.responseText);
+            document.close();
+        })
+    }
+}

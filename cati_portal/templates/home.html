@@ -9,22 +9,16 @@
     <p>You must <a href="{{url_for('authentication.login')}}">login</a> to use this web site. If you do not already have an account, you can <a href="{{url_for('authentication.register')}}">register</a>.</p>
   {%- else -%}
     {% if current_user.has_credential('cati_portal.user_moderator') %}
-        {% set users_info = namespace(active=0, inactive=0, others=[]) %}
+        {% set ns = namespace(pending=[]) %}
         {% for user in users.list() %}
-            {% if user.is_active %}
-                {% set users_info.active = users_info.active + 1 %} 
-            {% elif user.email_verification_time == none or  user.activation_time == none %}
-                {% do users_info.others.append(user) %}
-            {% else %}
-                {% set users_info.inactive = users_info.inactive + 1 %} 
+            {% if not user.is_active and (user.email_verification_time == none or user.activation_time == none) %}
+                {% do ns.pending.append(user) %}
             {% endif %}
         {% endfor %}
-        <h2>User moderation</h2>
-        <p>{{users_info.active}} active user</p>
-        <p>{{users_info.inactive}} inactive user</p>
-        {% if users_info.others %}
+        {% if ns.pending %}
+          <h2>Pending registrations</h2>
             {%- import 'users.jinja2' as users_tpl -%}
-            {{users_tpl.user_list_admin(users_info.others)}}
+            {{users_tpl.user_list_admin(ns.pending)}}
         {% endif %}
     {% endif %}
   {%- endif %}

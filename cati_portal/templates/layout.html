@@ -7,8 +7,9 @@
     <meta name="description" content="CATI portal">
     <meta name="author" content="CATI">
     <link rel="shortcut icon" href="{{url_for('static', filename='images/catidb.png')}}">
-
-    <title>{% set title %}{% block title %}{{title|default('CATI portal')}}{% endblock %}{% endset %}</title>
+    
+    {%- set title %}{{the_title|default('CATI portal')}}{% endset %}
+    <title>{% block title %}{{title}}{% endblock %}</title>
 
     <link href="{{url_for('static', filename='css/bootstrap.min.css')}}" rel="stylesheet">
     <link href="{{url_for('static', filename='css/jquery-ui.min.css')}}" rel="stylesheet">

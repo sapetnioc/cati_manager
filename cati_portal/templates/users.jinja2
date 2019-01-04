@@ -1,7 +1,7 @@
 {% macro user_list_admin(users) %}
   <table class="table">
     <thead>
-      <tr><th>login</th><th>email</th><th>first name</th><th>last name</th><th>registration</th><th>email verification</th><th>activation</th><th>deactivation</th></tr>
+      <tr><th>login</th><th>email</th><th>first name</th><th>last name</th><th>registration</th><th>email verification</th><th>activation</th><th>disable</th></tr>
     </thead>
     <tbody>
       {%- for user in users %}
@@ -13,7 +13,7 @@
         <td>{{user.registration_time}}</td>
         <td>{%if user.email_verification_time%}{{user.email_verification_time}}{%else%}<button class="btn btn-warning btn-xs" data-toggle="tooltip" title="Validate email {{user.email}} for login {{user.login}}" onclick="validate_email('{{user.login}}','{{user.email}}','{{url_for('authentication.modify_user', login=user.login)}}', true)"><span class="glyphicon glyphicon-ok" aria-hidden="true"></span></button>{%endif%}</td>
         <td>{%if user.activation_time%}{{user.activation_time}}{%else%}<button class="btn btn-warning btn-xs" data-toggle="tooltip" title="Activate user {{user.login}}" onclick="activate_user('{{user.login}}','{{url_for('authentication.modify_user', login=user.login)}}', true)"><span class="glyphicon glyphicon-ok" aria-hidden="true"></span></button>{%endif%}</td>
-        <td>{{user.deactivation_time or ''}}</td>
+        <td>{%if user.deactivation_time%}{{user.deactivation_time}} <button class="btn btn-success btn-xs" data-toggle="tooltip" title="Enable user {{user.login}}" onclick="enable_user('{{user.login}}','{{url_for('authentication.modify_user', login=user.login)}}')"><span class="glyphicon glyphicon-ok" aria-hidden="true"></span></button>{%else%}<button class="btn btn-danger btn-xs" data-toggle="tooltip" title="Disable user {{user.login}}" onclick="disable_user('{{user.login}}','{{url_for('authentication.modify_user', login=user.login)}}')"><span class="glyphicon glyphicon-remove" aria-hidden="true"></span></button>{%endif%}</td>
       </tr>        
       {% endfor %}
     </tbody>

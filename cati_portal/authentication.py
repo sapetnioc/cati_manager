@@ -321,4 +321,8 @@ def validate_email(code):
         flash(f'Succesfully validated email for {user.login}', 'success')
         return redirect(url_for('home.index'))
     abort(404)
-    
+
+@bp.route('/users', methods=('GET',))
+@credential_required('cati_portal.user_moderator')
+def users():
+    return render_template('users.html', users=Users(), the_title='Users administration')

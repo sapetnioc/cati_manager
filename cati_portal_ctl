@@ -121,6 +121,12 @@ def stop():
     singularity.stop('cati_portal')
     
 @cli.command()
+def restart():
+    singularity = Singularity()
+    singularity.stop('cati_portal')
+    singularity.start('cati_portal')    
+    
+@cli.command()
 def shell():
     singularity = Singularity()
     singularity.shell('cati_portal')
