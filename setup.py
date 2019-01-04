@@ -14,6 +14,7 @@ requires = [
     'flask-wtf',
     'psycopg2-binary >= 2.7',
     'click >= 5.0',
+    'gunicorn',
 ]
 
 tests_require = [

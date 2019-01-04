@@ -122,7 +122,8 @@ host    all             all             127.0.0.1/32            md5
     "POSTGRES_HOST": "localhost",
     "POSTGRES_PORT": "%s",
     "POSTGRES_DATABASE": "cati_portal",
-    "HTTP_PORT": "%s"
+    "HTTP_PORT": "%s",
+    "WORKERS_COUNT": 4
 }
 ''' % (pg_port, http_port), file=open(config_file, 'w'))
     
