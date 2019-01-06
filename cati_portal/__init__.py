@@ -9,7 +9,7 @@ def create_app(test_config=None):
     from flask import Flask
     from flask_login import LoginManager
     
-    from cati_portal.authentication import User
+    from cati_portal.http.authentication import User
     
     logging.config.dictConfig({
         'version': 1,
@@ -48,13 +48,13 @@ def create_app(test_config=None):
     from . import db
     db.init_app(app)
     
-    from . import authentication
+    from .http import authentication
     app.register_blueprint(authentication.bp)
 
-    from . import home
+    from .http import home
     app.register_blueprint(home.bp)
 
-    from . import settings
+    from .http import settings
     app.register_blueprint(settings.bp)
 
     return app

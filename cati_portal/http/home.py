@@ -7,7 +7,7 @@ from flask_login import current_user, login_user, login_required, logout_user
 from wtforms import StringField, PasswordField, HiddenField, SubmitField, validators
 from wtforms.widgets import HiddenInput
 
-from cati_portal.authentication import User, Users
+from .authentication import User, Users
 from cati_portal import db
 from cati_portal.form import RedirectForm
 

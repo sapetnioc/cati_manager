@@ -106,7 +106,7 @@ def manager_connect(request):
 
 
 def user_connect(request):
-    from cati_portal.authentication import get_user_password
+    from cati_portal.http.authentication import get_user_password
     
     host = request.registry.settings['cati_portal.postgresql_host']
     port = request.registry.settings.get('cati_portal.postgresql_port')

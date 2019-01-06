@@ -39,16 +39,13 @@ class Singularity:
     def shell(self, name):
         instance_name = 'instance://%s' % name
         
-        # Check if the instance is running
+        # Check if the Singularity instance is running
         running = False
-        process = subprocess.Popen(['singularity', 'instance.list', '-j'], stdout=subprocess.PIPE)
+        process = subprocess.Popen(['singularity', 'instance.list'], stdout=subprocess.PIPE)
         output, unused_err = process.communicate()
-        for d in json.loads(output.decode('utf-8'))['instances']:
-            if d['instance'] == instance_name:
-                running = True
-                break
-        
-        if running:
+        output=output.decode()
+        instances = set(line.split()[0] for line in output.split('\n')[1:] if line)        
+        if instance_name in instances:
             check_call(['singularity', 'shell', instance_name],
                     env=self.env)
         else:
