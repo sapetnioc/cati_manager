@@ -9,8 +9,9 @@ import string
 import pgpy
 from flask import current_app
 
-
 password_characters = string.ascii_letters + string.digits
+
+
 def generate_password(size):
     return ''.join(choice(password_characters) for i in range(size))
 

@@ -1,6 +1,4 @@
 import collections
-import os
-import pwd
 import threading
 import time
 
@@ -11,6 +9,7 @@ import psycopg2
 
 from cati_portal.encryption import pgp_secret_key
 
+
 class UserConnectionPool:
     class ConnectionRecord:
         def __init__(self, id, creation_time, last_used, connection):
@@ -18,13 +17,13 @@ class UserConnectionPool:
             self.creation_time = creation_time
             self.last_used = last_used
             self.connection = connection
-    
+
     def __init__(self, max_connections=6):
         self.lock = threading.RLock()
         self.max_connections = max_connections
         self.free = collections.deque()
         self.in_use = collections.deque()
-        
+
     def _get_connection(self, id, create_collection):
         with self.lock:
             for record in self.free:
@@ -43,7 +42,7 @@ class UserConnectionPool:
                     record.connection.close()
                 else:
                     raise RuntimeError('All database connections are in use')
-            connection= create_collection(id)
+            connection = create_collection(id)
             record = self.ConnectionRecord(id=id,
                                            creation_time=time.time(),
                                            last_used=time.time(),
@@ -62,11 +61,11 @@ class UserConnectionPool:
                 self.in_use.remove(record)
                 record.last_used = time.time()
                 self.free.append(record)
-    
+
     def _create_admin_connection(self, unused):
         return psycopg2.connect(dbname=current_app.config['POSTGRES_DATABASE'],
                                 port=current_app.config['POSTGRES_PORT'])
-        
+
     def _create_user_connection(self, login):
         pg_user = 'cati_portal$' + login
         with _get_admin_cursor() as cur:
@@ -79,16 +78,16 @@ class UserConnectionPool:
                                 dbname=current_app.config['POSTGRES_DATABASE'],
                                 user=pg_user,
                                 password=pg_password)
-    
+
     def get_admin_connection(self):
         return self._get_connection(None, self._create_admin_connection)
-    
+
     def get_user_connection(self, login):
         return self._get_connection(login, self._create_user_connection)
-        
+
     def free_admin_connection(self, connection):
         self._free_connection(connection)
-        
+
     def free_user_connection(self, login, connection):
         self._free_connection(connection)
 
@@ -96,14 +95,14 @@ class UserConnectionPool:
 class WithDatabaseConnection:
     def __init__(self, login):
         self.login = login
-    
+
     def __enter__(self):
         if self.login is None:
             self.connection = current_app.db_pool.get_admin_connection()
         else:
             self.connection = current_app.db_pool.get_user_connection(self.login)
         return self.connection
-    
+
     def __exit__(self, x, y, z):
         if x is None:
             self.connection.commit()
@@ -114,22 +113,24 @@ class WithDatabaseConnection:
         else:
             current_app.db_pool.free_user_connection(self.login, self.connection)
         self.connection = None
-    
+
+
 class WithDatabaseCursor:
     def __init__(self, login):
         self.login = login
-    
+
     def __enter__(self):
         self.wdb = WithDatabaseConnection(self.login)
         connection = self.wdb.__enter__()
         self.cursor = connection.cursor()
         return self.cursor.__enter__()
-    
+
     def __exit__(self, x, y, z):
         self.cursor.__exit__(x, y, z)
         self.wdb.__exit__(x, y, z)
         self.wdb = self.cursor = None
-        
+
+
 def get_db():
     '''
     with get_db() as db:
@@ -141,6 +142,7 @@ def get_db():
     else:
         raise RuntimeError('insuficient rights to connect to the database')
 
+
 def get_cursor():
     '''
     with get_admin_cursor() as cur:
@@ -148,14 +150,14 @@ def get_cursor():
     '''
     return WithDatabaseCursor(current_user.get_id())
 
+
 def _get_admin_db():
     return WithDatabaseConnection(None)
 
+
 def _get_admin_cursor():
     return WithDatabaseCursor(None)
-    
+
 
 def init_app(app):
     app.db_pool = UserConnectionPool()
-    
-

@@ -9,14 +9,15 @@ __license__ = ''
 __version__ = '0.0'
 __status__ = 'Development'
 
+
 def create_app(test_config=None):
     # Some submodules are used in an environement without thirdparty module installed.
     # Therefore flask cannot be used at module level.
     from flask import Flask
     from flask_login import LoginManager
-    
+
     from cati_portal.http.authentication import User
-    
+
     logging.config.dictConfig({
         'version': 1,
         'formatters': {'default': {
@@ -36,7 +37,7 @@ def create_app(test_config=None):
     app = Flask(__name__, instance_path='/cati_portal/flask_instance', instance_relative_config=True)
     secret_key_file = osp.join(os.environ.get('CATI_PORTAL_DIR', '/cati_portal'), 'pgp', 'secret.key')
     app.secret_key = open(secret_key_file, 'rb').read()
-    
+
     if test_config is None:
         # load the instance config, if it exists, when not testing
         app.config.from_json('config.json')
@@ -46,14 +47,14 @@ def create_app(test_config=None):
 
     login_manager = LoginManager(app)
     login_manager.login_view = 'authentication.login'
-    
+
     login_manager.user_loader(partial(User.get, bypass_access_rights=True))
 
     app.jinja_env.add_extension('jinja2.ext.do')
 
     from . import db
     db.init_app(app)
-    
+
     from .http import authentication
     app.register_blueprint(authentication.bp)
 
