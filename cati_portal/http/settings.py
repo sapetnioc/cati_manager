@@ -5,7 +5,7 @@ import os.path as osp
 from flask import (Blueprint, render_template, url_for, redirect, current_app)
 from flask_wtf import FlaskForm
 from flask_login import login_required
-from wtforms import StringField, PasswordField, SubmitField
+from wtforms import StringField, PasswordField, SubmitField, validators
 
 bp = Blueprint('settings', __name__, url_prefix='/settings')
 
@@ -19,9 +19,14 @@ class SettingsForm(FlaskForm):
     '''
     smtp_server = StringField('SMTP server')
     smtp_login = StringField('SMTP login')
-    smtp_password = PasswordField('SMTP password')
+    smtp_password = PasswordField('SMTP password', validators=[validators.EqualTo('confirm_smtp_password', message="Passwords and confirmation don't match")])
+    confirm_smtp_password = PasswordField('Confirm SMTP password')
     
     submit = SubmitField('Save settings')
+
+    def __init__(self, *args, **kwargs):
+        super(SettingsForm, self).__init__(*args, **kwargs)
+        self.confirm_smtp_password.flags.not_in_config = True
 
 @bp.route('', methods=('GET', 'POST'))
 @login_required
@@ -38,7 +43,7 @@ def settings():
             if field.type == 'PasswordField' and not field.data:
                 continue
             current_app.config[field.short_name.upper()] = field.data
-            if config is not None:
+            if config is not None and not field.flags.not_in_config:
                 config[field.short_name.upper()] = field.data
         if config is not None:
             json.dump(config, open(config_file, 'w'), indent=4)
