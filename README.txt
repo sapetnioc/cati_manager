@@ -17,12 +17,6 @@ Getting Started
 
     git clone https://github.com/sapetnioc/cati_portal.git cati_portal/git
 
-- During the transition from Pyramid to Flask, it is necessary to use the "flask" branch:
-
-    cd cati_portal/git
-    git checkout flask
-    cd ../..
-
 - Install a new portal
 
     cati_portal/git/cati_portal_ctl install
