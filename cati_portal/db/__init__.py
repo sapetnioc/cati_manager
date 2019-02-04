@@ -68,16 +68,17 @@ class UserConnectionPool:
                                 port=current_app.config['POSTGRES_PORT'])
         
     def _create_user_connection(self, login):
+        pg_user = 'cati_portal$' + login
         with _get_admin_cursor() as cur:
             sql = 'SELECT password FROM cati_portal.identity WHERE login=%s'
             cur.execute(sql, [login])
             encrypted = cur.fetchone()[0].tobytes()
-            pg_password = pgp_secret_key().decrypt(pgpy.PGPMessage.from_blob(encrypted)).message[:-22].decode('UTF8')
-            return psycopg2.connect(host=current_app.config['POSTGRES_HOST'],
-                                    port=current_app.config['POSTGRES_PORT'],
-                                    dbname=current_app.config['POSTGRES_DATABASE'],
-                                    user=f'cati_portal${login}',
-                                    password=pg_password)
+        pg_password = pgp_secret_key().decrypt(pgpy.PGPMessage.from_blob(encrypted)).message[:-22].decode('UTF8')
+        return psycopg2.connect(host=current_app.config['POSTGRES_HOST'],
+                                port=current_app.config['POSTGRES_PORT'],
+                                dbname=current_app.config['POSTGRES_DATABASE'],
+                                user=pg_user,
+                                password=pg_password)
     
     def get_admin_connection(self):
         return self._get_connection(None, self._create_admin_connection)
