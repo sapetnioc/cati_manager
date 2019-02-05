@@ -21,12 +21,13 @@ class SettingsForm(FlaskForm):
     smtp_login = StringField('SMTP login')
     smtp_password = PasswordField('SMTP password', validators=[validators.EqualTo('confirm_smtp_password', message="Passwords and confirmation don't match")])
     confirm_smtp_password = PasswordField('Confirm SMTP password')
-    
+
     submit = SubmitField('Save settings')
 
     def __init__(self, *args, **kwargs):
         super(SettingsForm, self).__init__(*args, **kwargs)
         self.confirm_smtp_password.flags.not_in_config = True
+
 
 @bp.route('', methods=('GET', 'POST'))
 @login_required

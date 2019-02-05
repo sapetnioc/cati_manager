@@ -9,19 +9,11 @@ def readme():
     with open('README.txt') as f:
         return f.read()
 
-requires = [
-    'flask >= 1.0',
-    'flask-login',
-    'flask-wtf',
-    'psycopg2-binary >= 2.7',
-    'click >= 5.0',
-    'gunicorn',
-    'pgpy',
-]
 
 def changes():
     with open('CHANGES.txt') as f:
         return f.read()
+
 
 setup(
     name='cati_portal',
@@ -46,7 +38,15 @@ setup(
     ],
     include_package_data=True,
     zip_safe=False,
-    install_requires=requires,
+    install_requires=[
+        'flask >= 1.0',
+        'flask-login',
+        'flask-wtf',
+        'psycopg2-binary >= 2.7',
+        'click >= 5.0',
+        'gunicorn',
+        'pgpy',
+    ],
     extras_require={
         'testing': [
             #'WebTest >= 1.3.1',  # py3 compat

@@ -18,9 +18,9 @@ deb http://fr.archive.ubuntu.com/ubuntu/ bionic universe
 deb http://fr.archive.ubuntu.com/ubuntu/ bionic-updates universe
 # deb-src http://fr.archive.ubuntu.com/ubuntu/ bionic-updates universe
 
-## N.B. software from this repository is ENTIRELY UNSUPPORTED by the Ubuntu 
-## team, and may not be under a free licence. Please satisfy yourself as to 
-## your rights to use the software. Also, please note that software in 
+## N.B. software from this repository is ENTIRELY UNSUPPORTED by the Ubuntu
+## team, and may not be under a free licence. Please satisfy yourself as to
+## your rights to use the software. Also, please note that software in
 ## multiverse WILL NOT receive any review or updates from the Ubuntu
 ## security team.
 deb http://fr.archive.ubuntu.com/ubuntu/ bionic multiverse

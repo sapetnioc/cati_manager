@@ -8,7 +8,7 @@ Getting Started
 
     sudo apt install git python3 python3-click singularity-container debootstrap
 
-- Create a new directory for hosting an instance of the portal (everything 
+- Create a new directory for hosting an instance of the portal (everything
   the instance will create goes into that directory)
 
     mkdir cati_portal

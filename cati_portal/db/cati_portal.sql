@@ -8,9 +8,9 @@ SET search_path = cati_portal, public;
 
 
 CREATE TABLE identity
-( 
-    login TEXT PRIMARY KEY, 
-    password BYTEA, 
+(
+    login TEXT PRIMARY KEY,
+    password BYTEA,
     email TEXT,
     first_name TEXT,
     last_name TEXT,
@@ -58,7 +58,7 @@ CREATE TRIGGER delete_identity_role BEFORE DELETE ON identity FOR EACH ROW EXECU
 
 
 CREATE TABLE git_repository (
-    id TEXT PRIMARY KEY NOT NULL, 
+    id TEXT PRIMARY KEY NOT NULL,
     name TEXT,
     description TEXT,
     url TEXT );
@@ -68,14 +68,14 @@ CREATE TABLE installed_software (
     tag TEXT);
 
 CREATE TABLE project_module (
-    id TEXT PRIMARY KEY NOT NULL, 
+    id TEXT PRIMARY KEY NOT NULL,
     name TEXT,
     description TEXT,
     module TEXT,
     software TEXT REFERENCES installed_software ON UPDATE CASCADE );
 
 CREATE TABLE project (
-    id TEXT PRIMARY KEY NOT NULL, 
+    id TEXT PRIMARY KEY NOT NULL,
     name TEXT,
     description TEXT,
     module TEXT REFERENCES project_module ON UPDATE CASCADE );
@@ -83,13 +83,13 @@ CREATE TABLE project (
 INSERT INTO project (id, name, description) VALUES ('cati_portal', 'CATI manager', 'Management of users and authorizations for all CATI studies and projects');
 
 
-    
+
 
 CREATE TABLE credential (
-    project TEXT  NOT NULL REFERENCES project ON UPDATE CASCADE, 
-    id TEXT NOT NULL, 
-    name TEXT, 
-    description TEXT, 
+    project TEXT  NOT NULL REFERENCES project ON UPDATE CASCADE,
+    id TEXT NOT NULL,
+    name TEXT,
+    description TEXT,
     PRIMARY KEY ( project, id ) );
 
 CREATE FUNCTION create_credential() RETURNS trigger AS $$
@@ -100,8 +100,8 @@ END $$ LANGUAGE plpgsql;
 CREATE TRIGGER create_credential BEFORE INSERT ON credential FOR EACH ROW EXECUTE PROCEDURE create_credential();
 
 
-CREATE TABLE granting ( 
-    project TEXT NOT NULL, 
+CREATE TABLE granting (
+    project TEXT NOT NULL,
     credential TEXT NOT NULL,
     login TEXT NOT NULL REFERENCES identity ON UPDATE CASCADE,
     FOREIGN KEY (project, credential) REFERENCES credential ON UPDATE CASCADE,
@@ -117,27 +117,27 @@ REVOKE ALL ON FUNCTION create_granting() FROM PUBLIC;
 CREATE TRIGGER create_granting BEFORE INSERT ON granting FOR EACH ROW EXECUTE PROCEDURE create_granting();
 
 CREATE VIEW identity_email_not_verified AS
-    SELECT *, md5(login || 
-                    coalesce(first_name,'') || 
-                    coalesce(last_name,'') || 
-                    coalesce(email,'') || 
+    SELECT *, md5(login ||
+                    coalesce(first_name,'') ||
+                    coalesce(last_name,'') ||
+                    coalesce(email,'') ||
                     coalesce(registration_time::text, '')) secret
     FROM cati_portal.identity
     WHERE login != 'cati_portal' AND
         email_verification_time IS NULL;
 
-CREATE VIEW identity_not_validated AS 
+CREATE VIEW identity_not_validated AS
     SELECT *
     FROM cati_portal.identity i
     WHERE i.login != 'cati_portal' AND
         i.email_verification_time IS NOT NULL AND
         i.login NOT IN
-        (SELECT login 
-            FROM cati_portal.granting g 
-            WHERE g.project = 'cati_portal' AND 
+        (SELECT login
+            FROM cati_portal.granting g
+            WHERE g.project = 'cati_portal' AND
                 g.credential = 'valid_user');
 
--- This view returns all the projects for which the current_user has at least 
+-- This view returns all the projects for which the current_user has at least
 -- one credential
 CREATE VIEW my_projects AS
     SELECT * FROM project
@@ -154,8 +154,8 @@ GRANT SELECT ON TABLE cati_portal.my_projects TO PUBLIC;
 GRANT SELECT ON TABLE cati_portal.credential TO PUBLIC;
 GRANT SELECT ON granting TO PUBLIC;
 ALTER TABLE granting ENABLE ROW LEVEL SECURITY;
-    CREATE POLICY my_grants 
-    ON granting USING (current_user = 'cati_portal$' || login); 
+    CREATE POLICY my_grants
+    ON granting USING (current_user = 'cati_portal$' || login);
 GRANT SELECT ON TABLE cati_portal.identity_not_validated TO cati_portal$user_moderator;
 GRANT SELECT ON TABLE cati_portal.identity_email_not_verified TO cati_portal$user_moderator;
 GRANT SELECT, INSERT ON TABLE cati_portal.granting TO cati_portal$user_moderator;
@@ -163,7 +163,7 @@ INSERT INTO credential (project, id, name, description) VALUES ('cati_portal', '
 
 
 
-CREATE TABLE study_template 
+CREATE TABLE study_template
 (
     id VARCHAR NOT NULL PRIMARY KEY,
     python_module VARCHAR,

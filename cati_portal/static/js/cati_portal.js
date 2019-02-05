@@ -24,7 +24,7 @@ function validate_email(login, email, user_url, ask=false) {
                 email_verification: true,
             }
         })
-        .done(function() {  
+        .done(function() {
             location.reload();
         })
         .fail(function (jqXHR) {
@@ -45,7 +45,7 @@ function activate_user(login, user_url, ask=false) {
                 activation: true,
             }
         })
-        .done(function() {  
+        .done(function() {
             location.reload();
         })
         .fail(function (jqXHR) {
@@ -65,7 +65,7 @@ function disable_user(login, user_url, ask=false) {
                 deactivation: true,
             }
         })
-        .done(function() {  
+        .done(function() {
             location.reload();
         })
         .fail(function (jqXHR) {
@@ -85,7 +85,7 @@ function enable_user(login, user_url, ask=false) {
                 deactivation: false,
             }
         })
-        .done(function() {  
+        .done(function() {
             location.reload();
         })
         .fail(function (jqXHR) {

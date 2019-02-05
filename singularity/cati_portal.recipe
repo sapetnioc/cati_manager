@@ -2,7 +2,7 @@ BootStrap: localimage
 From: ../../base.simg
 
 %post
-    
+
 %environment:
     export CATI_PORTAL_DIR="/cati_portal"
     export PGDATA="$CATI_PORTAL_DIR/postgresql"
@@ -14,5 +14,4 @@ From: ../../base.simg
 %startscript
     pg_ctl -l "$CATI_PORTAL_DIR/log/postgresql.log" start
 
-    exec $CATI_PORTAL_DIR/venv/bin/python -m cati_portal.http_server 
-    
+    exec $CATI_PORTAL_DIR/venv/bin/python -m cati_portal.http_server

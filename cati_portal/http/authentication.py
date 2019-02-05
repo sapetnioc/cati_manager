@@ -25,20 +25,22 @@ def credential_required(credential):
             if not current_user.has_credential(credential):
                 return current_app.login_manager.unauthorized()
             return func(*args, **kwargs)
-        
+
         return login_required(decorated_view)
     return decorator
 
 bp = Blueprint('authentication', __name__, url_prefix='/authentication')
 
+
 class LoginForm(RedirectForm):
-    login     = StringField('login', [validators.DataRequired()])
+    login = StringField('login', [validators.DataRequired()])
     password = PasswordField('Password', validators=[validators.DataRequired()])
     submit = SubmitField('Sign in')
 
+
 class User:
     def __init__(self, login, email, first_name, last_name, institution,
-                 registration_time, email_verification_time, 
+                 registration_time, email_verification_time,
                  email_verification_code, activation_time,
                  deactivation_time):
         self.login = login
@@ -52,13 +54,12 @@ class User:
         self.registration_time = registration_time
         self.activation_time = activation_time
         self.deactivation_time = deactivation_time
-        self.is_active = (activation_time is not None and 
-                          email_verification_time is not None and 
+        self.is_active = (activation_time is not None and
+                          email_verification_time is not None and
                           deactivation_time is None)
         self.is_authenticated = True
         self.is_anonymous = False
-    
-    
+
     @staticmethod
     def _iterate_users(cur, where, where_data):
         sql = f'SELECT login, email, first_name, last_name, institution, registration_time, email_verification_time, activation_time, deactivation_time FROM cati_portal.identity WHERE {where}'
@@ -70,15 +71,16 @@ class User:
             else:
                 email_verification_code = None
             yield User(login=login,
-                        email=email,
-                        first_name=first_name,
-                        last_name=last_name,
-                        institution=institution,
-                        registration_time=registration_time,
-                        email_verification_time=email_verification_time, 
-                        email_verification_code=email_verification_code, 
-                        activation_time=activation_time, 
-                        deactivation_time=deactivation_time)
+                       email=email,
+                       first_name=first_name,
+                       last_name=last_name,
+                       institution=institution,
+                       registration_time=registration_time,
+                       email_verification_time=email_verification_time,
+                       email_verification_code=email_verification_code,
+                       activation_time=activation_time,
+                       deactivation_time=deactivation_time)
+
     @staticmethod
     def get(login, bypass_access_rights=False):
         if bypass_access_rights:
@@ -92,8 +94,7 @@ class User:
             except StopIteration:
                 pass
         return None
-    
-    
+
     @staticmethod
     def get_from_email_verification_code(email_verification_code):
         with _get_admin_cursor() as cur:
@@ -103,7 +104,7 @@ class User:
             except StopIteration:
                 pass
         return None
-    
+
     @staticmethod
     def create(login, password, email, first_name=None, last_name=None, institution=None):
         '''
@@ -115,11 +116,10 @@ class User:
             sql = 'INSERT INTO cati_portal.identity(login, password, email, first_name, last_name, institution) VALUES (%s, %s, %s, %s, %s, %s)'
             cur.execute(sql, [login, password, email, first_name, last_name, institution])
         return User.get(login, bypass_access_rights=True)
-    
 
     def get_id(self):
         return self.login
-    
+
     def check_password(self, password):
         '''
         Check the password of a user
@@ -132,7 +132,7 @@ class User:
                     hash = cur.fetchone()[0].tobytes()
                     return check_password(password, hash)
         return False
-    
+
     def has_credential(self, required):
         '''
         Verify that the user has a credential
@@ -148,13 +148,15 @@ class User:
                 return (cur.fetchone()[0] == 1)
         return False
 
+
 class Users:
     @staticmethod
     def list():
         with get_cursor() as cur:
             for user in User._iterate_users(cur, 'TRUE', []):
                 yield user
-        
+
+
 @bp.route('/install', methods=('GET', 'POST'))
 def install():
     hash_file = osp.join(os.environ.get('CATI_PORTAL_DIR', '/cati_portal'), 'tmp', 'installation.hash')
@@ -163,19 +165,19 @@ def install():
         if form.validate_on_submit():
             hash = open(hash_file, 'rb').read()
             if check_password(form.install_code.data, hash):
-                user = User.create(login = form.login.data,
-                                   email = form.email.data,
-                                   password = form.password.data,
-                                   first_name = form.first_name.data,
-                                   last_name = form.last_name.data,
-                                   institution = form.institution.data)
+                user = User.create(login=form.login.data,
+                                   email=form.email.data,
+                                   password=form.password.data,
+                                   first_name=form.first_name.data,
+                                   last_name=form.last_name.data,
+                                   institution=form.institution.data)
                 with _get_admin_cursor() as cur:
                     time = datetime.datetime.now()
                     sql = 'UPDATE cati_portal.identity SET activation_time = %s, email=%s, email_verification_time = %s WHERE login = %s;'
                     cur.execute(sql, [time, user.email, time, user.login])
                     sql = 'INSERT INTO cati_portal.granting (login, project, credential) VALUES (%s, %s, %s);'
                     cur.executemany(sql, [[user.login, 'cati_portal', 'server_admin'],
-                                           [user.login, 'cati_portal', 'user_moderator']])
+                                          [user.login, 'cati_portal', 'user_moderator']])
                 flash(f'Administrator {form.login.data} succesfully registered and activated with server and user management rights', 'success')
                 user = User.get(user.login, bypass_access_rights=True)
                 login_user(user)
@@ -184,6 +186,7 @@ def install():
             flash('Invalid installation code', 'danger')
         return render_template('form_page.html', title='Administrator registration', form=form)
     abort(404)
+
 
 @bp.route('/login', methods=('GET', 'POST'))
 def login():
@@ -202,6 +205,7 @@ def login():
         return form.redirect('home.index')
     return render_template('form_page.html', form=form, title='Sign in')
 
+
 @bp.route('/logout')
 @login_required
 def logout():
@@ -210,8 +214,8 @@ def logout():
 
 
 class RegistrationForm(FlaskForm):
-    login     = StringField('login', [validators.DataRequired(), validators.Length(min=4, max=25)], render_kw=dict(size=32))
-    email        = StringField('Email Address', [validators.DataRequired(), validators.Email()])
+    login = StringField('login', [validators.DataRequired(), validators.Length(min=4, max=25)], render_kw=dict(size=32))
+    email = StringField('Email Address', [validators.DataRequired(), validators.Email()])
     password = PasswordField('Password', validators=[validators.DataRequired(), validators.EqualTo('confirm_password', message='Passwords does not match')])
     confirm_password = PasswordField('Confirm password', validators=[validators.DataRequired()])
     first_name = StringField('First name', [validators.Length(max=40)])
@@ -220,18 +224,19 @@ class RegistrationForm(FlaskForm):
     install_code = StringField('Installation code', [validators.Length(max=16)])
     submit = SubmitField('Register')
 
+
 @bp.route('/register', methods=('GET', 'POST'))
 def register():
     form = RegistrationForm()
     form.install_code.widget = HiddenInput()
     form.install_code.flags.hidden = True
     if form.validate_on_submit():
-        user = User.create(login = form.login.data,
-                           email = form.email.data,
-                           password = form.password.data,
-                           first_name = form.first_name.data,
-                           last_name = form.last_name.data,
-                           institution = form.institution.data)
+        user = User.create(login=form.login.data,
+                           email=form.email.data,
+                           password=form.password.data,
+                           first_name=form.first_name.data,
+                           last_name=form.last_name.data,
+                           institution=form.institution.data)
         flash(f'Succesful registration request for {form.login.data}. An email will be send to {form.email.data} to validate the email. The account must be activated before it can be used.', 'success')
         return redirect(url_for('home.index'))
     return render_template('form_page.html', form=form)
@@ -245,17 +250,18 @@ def delete_user(login):
         cur.execute(sql, [login])
     return ''
 
+
 @bp.route('/user/<login>', methods=('PUT',))
 @credential_required('cati_portal.user_moderator')
 def modify_user(login):
     user = User.get(login)
     if user is None:
         abort(404)
-    email_verification = request.form.get('email_verification') 
+    email_verification = request.form.get('email_verification')
     activation = request.form.get('activation')
     deactivation = request.form.get('deactivation')
-    
-    user_modifications= {}
+
+    user_modifications = {}
     now = datetime.datetime.now()
     if email_verification is not None:
         email_verification = email_verification.lower()
@@ -297,6 +303,7 @@ def modify_user(login):
         flash(f'Nothing to do', 'danger')
     return ''
 
+
 @bp.route('/user/<login>/ask_email_validation', methods=('GET',))
 @credential_required('cati_portal.user_moderator')
 def ask_email_validation(login):
@@ -321,6 +328,7 @@ def validate_email(code):
         flash(f'Succesfully validated email for {user.login}', 'success')
         return redirect(url_for('home.index'))
     abort(404)
+
 
 @bp.route('/users', methods=('GET',))
 @credential_required('cati_portal.user_moderator')
