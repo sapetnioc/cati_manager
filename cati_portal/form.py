@@ -1,5 +1,5 @@
 from urllib.parse import urlparse, urljoin
-from flask import request, url_for, redirect
+from flask import request, redirect
 from flask_wtf import FlaskForm
 from wtforms import HiddenField
 

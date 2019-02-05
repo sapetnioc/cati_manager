@@ -1,11 +1,14 @@
 import os
 import os.path as osp
 try:
-    from secret import choice
+    # New in Python 3.6
+    from secrets import choice
 except:
+    # Warning: The pseudo-random generators of this module should not be
+    # used for security purposes. For security or cryptographic uses, see
+    # the secrets module.
     from random import choice
 import string
-
 import pgpy
 from flask import current_app
 
