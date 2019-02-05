@@ -46,14 +46,7 @@ setup(
     ],
     include_package_data=True,
     zip_safe=False,
-    install_requires=[
-        'flask >= 1.0',
-        'flask-login',
-        'flask-wtf',
-        'psycopg2-binary >= 2.7',
-        'click >= 5.0',
-        'gunicorn',
-    ],
+    install_requires=requires,
     extras_require={
         'testing': [
             #'WebTest >= 1.3.1',  # py3 compat
