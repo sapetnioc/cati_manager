@@ -9,6 +9,15 @@ def readme():
     with open('README.txt') as f:
         return f.read()
 
+requires = [
+    'flask >= 1.0',
+    'flask-login',
+    'flask-wtf',
+    'psycopg2-binary >= 2.7',
+    'click >= 5.0',
+    'gunicorn',
+    'pgpy',
+]
 
 def changes():
     with open('CHANGES.txt') as f:

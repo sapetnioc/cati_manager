@@ -76,8 +76,8 @@ def check_output(cmd, input=None, **kwargs):
 
 @cli.command()
 @click.option('--delete-existing', is_flag=True)
-@click.option('--pg_port', default='5432')
-@click.option('--http_port', default='8080')
+@click.option('--pg_port', default='54321')  # instead of PostgreSQL default port 5432
+@click.option('--http_port', default='8080')  # instead of HTTP default port 80
 def install(delete_existing, pg_port, http_port):
     directory = osp.dirname(osp.dirname(osp.abspath(__file__)))
     print('Creating new cati_portal instance in', directory)
