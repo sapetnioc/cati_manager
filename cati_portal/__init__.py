@@ -3,6 +3,12 @@ import logging.config
 import os
 import os.path as osp
 
+__author__ = ''
+__email__ = ''
+__license__ = ''
+__version__ = '0.0'
+__status__ = 'Development'
+
 def create_app(test_config=None):
     # Some submodules are used in an environement without thirdparty module installed.
     # Therefore flask cannot be used at module level.
