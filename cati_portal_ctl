@@ -6,6 +6,7 @@ import os.path as osp
 import sys
 import shutil
 import subprocess
+import tempfile
 
 import click
 
@@ -51,6 +52,25 @@ class Singularity:
             check_call(['singularity', 'shell',  '-B', '%s:/cati_portal' % self.directory, self.simg],
                     env=self.env)
 
+    def build(self, output_image, singularity_dir, recipe_file):
+        # Try to write in output directory with root. If not possible,
+        # image must be created in a temporary directory and copied.
+        try:
+            test_file = output_image + '.test'
+            subprocess.check_call(['sudo', 'touch', test_file])
+        except subprocess.CalledProcessError:
+            use_tmp = True
+        else:
+            use_tmp = False
+            subprocess.check_call(['sudo', 'rm', test_file])
+        if use_tmp:
+            tmp = tempfile.NamedTemporaryFile(suffix='.simg')
+            os.remove(tmp.name)
+            check_call(['sudo', 'singularity', 'build', tmp.name, osp.join(singularity_dir, recipe_file)], cwd=singularity_dir)
+            subprocess.check_call(['sudo', 'chown', '%s:%s' % (os.environ['USER'],os.environ['USER']), tmp.name])
+            check_call(['cp', tmp.name, output_image])
+        else:
+            check_call(['sudo', 'singularity', 'build', output_image, osp.join(singularity_dir, recipe_file)], cwd=singularity_dir)
 
 
 @click.group()
@@ -94,9 +114,9 @@ def install(delete_existing, pg_port, http_port):
 
     singularity_dir =  osp.join(git, 'singularity')
     if not osp.exists(base_simg):
-        check_call(['sudo', 'singularity', 'build', base_simg, osp.join(singularity_dir, 'base.recipe')], cwd=singularity_dir)
+        singularity.build(base_simg, singularity_dir, 'base.recipe')
     if not osp.exists(cati_portal_simg):
-        check_call(['sudo', 'singularity', 'build', cati_portal_simg, osp.join(singularity_dir, 'cati_portal.recipe')], cwd=singularity_dir)
+        singularity.build(cati_portal_simg, singularity_dir, 'cati_portal.recipe')
 
     if not osp.exists(venv):
         singularity(['python3', '-m', 'venv', '--system-site-packages', '/cati_portal/venv'])
