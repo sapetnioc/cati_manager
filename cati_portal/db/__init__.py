@@ -10,10 +10,10 @@ import psycopg2
 from cati_portal.encryption import pgp_secret_key
 
 
-class UserConnectionPool:
+class ConnectionPool:
     class ConnectionRecord:
-        def __init__(self, id, creation_time, last_used, connection):
-            self.id = id
+        def __init__(self, user_id, creation_time, last_used, connection):
+            self.user_id = user_id
             self.creation_time = creation_time
             self.last_used = last_used
             self.connection = connection
@@ -24,34 +24,35 @@ class UserConnectionPool:
         self.free = collections.deque()
         self.in_use = collections.deque()
 
-    def _get_connection(self, id, create_collection):
+    def get_connection(self, user_id):
         with self.lock:
-            for record in self.free:
-                if record.id == id:
-                    break
-            else:
-                record = None
-            if record is not None:
-                self.free.remove(record)
+            if self.free:
+                record = self.free.popleft()
                 record.last_used = time.time()
                 self.in_use.append(record)
                 return record.connection
-            if len(self.free) + len(self.in_use) == self.max_connections:
-                if self.free:
-                    record = self.free.popleft()
-                    record.connection.close()
-                else:
-                    raise RuntimeError('All database connections are in use')
-            connection = create_collection(id)
-            record = self.ConnectionRecord(id=id,
+            if len(self.in_use) == self.max_connections:
+                raise RuntimeError('All database connections are in use')
+            connection =  psycopg2.connect(host=current_app.config['POSTGRES_HOST'],
+                                           port=current_app.config['POSTGRES_PORT'],
+                                           dbname=current_app.config['POSTGRES_DATABASE'],
+                                           user=current_app.config['POSTGRES_USER'],
+                                           password=current_app.config['POSTGRES_PASSWORD'])
+            if user_id is not None:
+                pg_user = 'cati_portal$' + user_id
+                with connection.cursor() as cur:
+                    cur.execute('SET ROLE %s;' % pg_user)
+            record = self.ConnectionRecord(user_id=user_id,
                                            creation_time=time.time(),
                                            last_used=time.time(),
                                            connection=connection)
             self.in_use.append(record)
             return record.connection
 
-    def _free_connection(self, connection):
+    def free_connection(self, connection):
         with self.lock:
+            with connection.cursor() as cur:
+                cur.execute('RESET ROLE;')
             for record in self.in_use:
                 if record.connection == connection:
                     break
@@ -62,45 +63,13 @@ class UserConnectionPool:
                 record.last_used = time.time()
                 self.free.append(record)
 
-    def _create_admin_connection(self, unused):
-        return psycopg2.connect(dbname=current_app.config['POSTGRES_DATABASE'],
-                                port=current_app.config['POSTGRES_PORT'])
-
-    def _create_user_connection(self, login):
-        pg_user = 'cati_portal$' + login
-        with _get_admin_cursor() as cur:
-            sql = 'SELECT password FROM cati_portal.identity WHERE login=%s'
-            cur.execute(sql, [login])
-            encrypted = cur.fetchone()[0].tobytes()
-        pg_password = pgp_secret_key().decrypt(pgpy.PGPMessage.from_blob(encrypted)).message[:-22].decode('UTF8')
-        return psycopg2.connect(host=current_app.config['POSTGRES_HOST'],
-                                port=current_app.config['POSTGRES_PORT'],
-                                dbname=current_app.config['POSTGRES_DATABASE'],
-                                user=pg_user,
-                                password=pg_password)
-
-    def get_admin_connection(self):
-        return self._get_connection(None, self._create_admin_connection)
-
-    def get_user_connection(self, login):
-        return self._get_connection(login, self._create_user_connection)
-
-    def free_admin_connection(self, connection):
-        self._free_connection(connection)
-
-    def free_user_connection(self, login, connection):
-        self._free_connection(connection)
-
 
 class WithDatabaseConnection:
     def __init__(self, login):
         self.login = login
 
     def __enter__(self):
-        if self.login is None:
-            self.connection = current_app.db_pool.get_admin_connection()
-        else:
-            self.connection = current_app.db_pool.get_user_connection(self.login)
+        self.connection = current_app.db_pool.get_connection(self.login)
         return self.connection
 
     def __exit__(self, x, y, z):
@@ -108,10 +77,7 @@ class WithDatabaseConnection:
             self.connection.commit()
         else:
             self.connection.rollback()
-        if self.login is None:
-            current_app.db_pool.free_admin_connection(self.connection)
-        else:
-            current_app.db_pool.free_user_connection(self.login, self.connection)
+        current_app.db_pool.free_connection(self.connection)
         self.connection = None
 
 
@@ -160,4 +126,4 @@ def _get_admin_cursor():
 
 
 def init_app(app):
-    app.db_pool = UserConnectionPool()
+    app.db_pool = ConnectionPool()

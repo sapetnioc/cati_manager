@@ -121,6 +121,7 @@ def install(delete_existing, pg_port, http_port):
     if not osp.exists(venv):
         singularity(['python3', '-m', 'venv', '--system-site-packages', '/cati_portal/venv'])
         pip = '/cati_portal/venv/bin/pip'
+        singularity([pip, 'install', '--upgrade', 'pip'])
         singularity([pip, 'install', '--editable', '/cati_portal/git'])
 
     singularity(['/cati_portal/venv/bin/python', '-m', 'cati_portal.install', str(delete_existing), pg_port, http_port])

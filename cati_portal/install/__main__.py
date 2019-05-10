@@ -10,6 +10,7 @@ import os
 import os.path as osp
 import sys
 import tempfile
+import secrets
 import shutil
 
 import pgpy
@@ -96,23 +97,19 @@ Expire-Date: 0
 host    all             all             127.0.0.1/32            md5
 ''', file=open(conf_file, 'w'))
 
+        pg_password = secrets.token_urlsafe()
         # Start postgresql
         subprocess.run(['pg_ctl', '-l', osp.join(log, 'postgresql.log'), 'start'], check=True)
         try:
             subprocess.run(['createdb', '-p', pg_port, 'cati_portal'], check=True)
             with psycopg2.connect(dbname='cati_portal', port=pg_port) as db:
                 with db.cursor() as cur:
+                    cur.execute("CREATE ROLE cati_portal NOINHERIT BYPASSRLS LOGIN PASSWORD '%s'" % pg_password)
                     for id, sql in sql_changesets('cati_portal.db'):
                         cur.execute(sql)
 
                     sql = "INSERT INTO cati_portal.pgp_public_keys (name, pgp_key) VALUES ('cati_portal', %s);"
                     cur.execute(sql, [bytes(pgp_public_key())])
-
-                    #db.commit()
-
-                    #for id, sql in sql_changesets('cati_portal.install'):
-                        #print(sql)
-                        #cur.execute(sql)
         finally:
             subprocess.run(['pg_ctl', 'stop'], check=True)
 
@@ -122,11 +119,13 @@ host    all             all             127.0.0.1/32            md5
         print('''{
     "POSTGRES_HOST": "localhost",
     "POSTGRES_PORT": "%s",
+    "POSTGRES_USER": "cati_portal",
+    "POSTGRES_PASSWORD": "%s",
     "POSTGRES_DATABASE": "cati_portal",
     "HTTP_PORT": "%s",
     "WORKERS_COUNT": 4
 }
-''' % (pg_port, http_port), file=open(config_file, 'w'))
+''' % (pg_port, pg_password, http_port), file=open(config_file, 'w'))
 
     # Create an installation password and store its hash representation
     installation_password = generate_password(16)

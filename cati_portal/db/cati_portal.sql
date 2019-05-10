@@ -36,7 +36,8 @@ BEGIN
     salt := substring(gen_salt('bf'),8);
     pwd := NEW.password;
     NEW.password := pgp_pub_encrypt_bytea(NEW.password || salt, key_var);
-    EXECUTE 'CREATE ROLE ' || quote_ident('cati_portal$' || NEW.login) || ' LOGIN PASSWORD ' || quote_literal(convert_from(pwd,'UTF8')) || ';';
+    EXECUTE 'CREATE ROLE ' || quote_ident('cati_portal$' || NEW.login) || ' NOLOGIN;';
+    EXECUTE 'GRANT ' || quote_ident('cati_portal$' || NEW.login) || ' TO cati_portal;';
     RETURN NEW;
 END $$ LANGUAGE plpgsql
 SECURITY DEFINER;
@@ -147,20 +148,22 @@ CREATE VIEW my_projects AS
 
 INSERT INTO credential (project, id, name, description) VALUES ('cati_portal', 'server_admin', 'server administrator', 'A server administrator can put the server in maintenane mode, modify its settings and update the database schema and the software.');
 INSERT INTO credential (project, id, name, description) VALUES ('cati_portal', 'user_moderator', 'user moderator', 'A user moderator can validate and invalidate user accounts.');
-GRANT USAGE ON SCHEMA cati_portal TO cati_portal$server_admin, cati_portal$user_moderator;
-GRANT SELECT, UPDATE, DELETE ON TABLE cati_portal.identity TO cati_portal$server_admin, cati_portal$user_moderator;
+GRANT USAGE ON SCHEMA cati_portal TO cati_portal, cati_portal$server_admin, cati_portal$user_moderator;
+GRANT SELECT, UPDATE, DELETE, TRUNCATE, INSERT ON TABLE cati_portal.identity TO cati_portal, cati_portal$server_admin, cati_portal$user_moderator;
 GRANT SELECT ON TABLE cati_portal.project TO PUBLIC;
 GRANT SELECT ON TABLE cati_portal.my_projects TO PUBLIC;
 GRANT SELECT ON TABLE cati_portal.credential TO PUBLIC;
 GRANT SELECT ON granting TO PUBLIC;
-ALTER TABLE granting ENABLE ROW LEVEL SECURITY;
-    CREATE POLICY my_grants
-    ON granting USING (current_user = 'cati_portal$' || login);
-GRANT SELECT ON TABLE cati_portal.identity_not_validated TO cati_portal$user_moderator;
-GRANT SELECT ON TABLE cati_portal.identity_email_not_verified TO cati_portal$user_moderator;
-GRANT SELECT, INSERT ON TABLE cati_portal.granting TO cati_portal$user_moderator;
-INSERT INTO credential (project, id, name, description) VALUES ('cati_portal', 'valid_user', 'valid user', 'A user with this credential has been validated by a user moderator. Without this credential, a user cannot do anything.');
 
+ALTER TABLE granting ENABLE ROW LEVEL SECURITY;
+CREATE POLICY my_grants
+    ON granting 
+    USING (current_user = 'cati_portal' OR current_user = 'cati_portal$' || login);
+
+GRANT SELECT ON TABLE cati_portal.identity_not_validated TO cati_portal, cati_portal$user_moderator;
+GRANT SELECT ON TABLE cati_portal.identity_email_not_verified TO cati_portal, cati_portal$user_moderator;
+GRANT SELECT, INSERT ON TABLE cati_portal.granting TO cati_portal, cati_portal$user_moderator;
+INSERT INTO credential (project, id, name, description) VALUES ('cati_portal', 'valid_user', 'valid user', 'A user with this credential has been validated by a user moderator. Without this credential, a user cannot do anything.');
 
 
 CREATE TABLE study_template
