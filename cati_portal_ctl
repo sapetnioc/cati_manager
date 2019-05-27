@@ -1,77 +1,83 @@
 #! /usr/bin/env python3
 
 import glob
+import json
 import os
 import os.path as osp
 import sys
 import shutil
 import subprocess
 import tempfile
+import secrets
+import sys
 
 import click
 
-class Singularity:
+class Docker:
+    ldap_image = 'ldap_cati_portal'
+    sftp_image = 'sftp_cati_portal'
+    postgres_image = 'postgres_cati_portal'
+    portal_image = 'cati_portal'
+    
+    ldap_container = 'ldap_cati_portal'
+    sftp_container = 'sftp_cati_portal'
+    postgres_container = 'postgres_cati_portal'
+    portal_container = 'cati_portal'
+    
     def __init__(self):
         self.directory = osp.dirname(osp.dirname(osp.abspath(__file__)))
-        self.simg = osp.join(self.directory, 'cati_portal.simg')
+        self.git = osp.join(self.directory, 'git')
+        self.postgres = osp.join(self.directory, 'postgres')
+        self.venv = osp.join(self.directory, 'venv')
+        self.run = osp.join(self.directory, 'run')
         self.tmp = osp.join(self.directory, 'tmp')
-        self.env = os.environ.copy()
-        self.env['SINGULARITY_TMPDIR'] = self.tmp
+    
+    def build(self, image, build_directory):
+        build_directory = osp.join(self.git, 'docker', build_directory)
+        check_call(['docker', 'build', '-t', image, build_directory])
 
-    def __call__(self, cmd, **kwargs):
-        check_call(['singularity', 'run', '-B', '%s:/cati_portal' % self.directory, self.simg] + cmd,
-                   env=self.env, **kwargs)
+    def pull(self, image):
+        check_call(['docker', 'pull', image])
 
-    def output(self, cmd, **kwargs):
-        return check_output(['singularity', 'run', '-B', '%s:/cati_portal' % self.directory, self.simg] + cmd,
-                   env=self.env, **kwargs)
+    def __call__(self, cmd, image=portal_image, rm=True, daemon=False, name=None):
+        opts = []
+        if rm:
+            opts.append('--rm')
+        if daemon:
+            opts.append('-d')
+        if name:
+            opts += ['--name', name]
+        
+        check_call(['docker', 'run'] + opts + ['-v', '%s:/cati_portal' % self.directory, image] + cmd)
 
-    def start(self, name):
-        check_call(['singularity', 'instance.start', '-B', '%s:/cati_portal' % self.directory, self.simg, name],
-                   env=self.env)
-
-    def stop(self, name):
-        check_call(['singularity', 'instance.stop', name],
-                   env=self.env)
-        for f in glob.glob(osp.join(self.tmp, 'cati_portal.simg.%s.*' % name)):
-            os.remove(f)
-
-    def shell(self, name):
-        instance_name = 'instance://%s' % name
-
-        # Check if the Singularity instance is running
-        running = False
-        process = subprocess.Popen(['singularity', 'instance.list'], stdout=subprocess.PIPE)
-        output, unused_err = process.communicate()
-        output=output.decode()
-        instances = set(line.split()[0] for line in output.split('\n')[1:] if line)
-        if instance_name in instances:
-            check_call(['singularity', 'shell', instance_name],
-                    env=self.env)
+    def shell(self):
+        if self.exists(self.portal_container):
+            # Container exists, check if it is running
+            if self.is_running(self.portal_container):
+                # Container is running, execute a shell in container
+                check_call(['docker', 'exec', '-it', self.portal_container, 'bash'])
+            else:
+                # Container is not running
+                print('ERROR: cati_portal had been stopped, you may start it with:', sys.argv[0], 'start')
+                sys.exit(1)
         else:
-            check_call(['singularity', 'shell',  '-B', '%s:/cati_portal' % self.directory, self.simg],
-                    env=self.env)
+            # Container does not exists, start a shell in a temporary container
+            check_call(['docker', 'run', '--rm', '-it', '-v', '%s:/cati_portal' % self.directory, self.portal_image, 'bash'])
 
-    def build(self, output_image, singularity_dir, recipe_file):
-        # Try to write in output directory with root. If not possible,
-        # image must be created in a temporary directory and copied.
-        try:
-            test_file = output_image + '.test'
-            subprocess.check_call(['sudo', 'touch', test_file])
-        except subprocess.CalledProcessError:
-            use_tmp = True
-        else:
-            use_tmp = False
-            subprocess.check_call(['sudo', 'rm', test_file])
-        if use_tmp:
-            tmp = tempfile.NamedTemporaryFile(suffix='.simg')
-            os.remove(tmp.name)
-            check_call(['sudo', 'singularity', 'build', tmp.name, osp.join(singularity_dir, recipe_file)], cwd=singularity_dir)
-            subprocess.check_call(['sudo', 'chown', '%s:%s' % (os.environ['USER'],os.environ['USER']), tmp.name])
-            check_call(['cp', tmp.name, output_image])
-        else:
-            check_call(['sudo', 'singularity', 'build', output_image, osp.join(singularity_dir, recipe_file)], cwd=singularity_dir)
+    def exists(self, container):
+        '''
+        Check if a container exists
+        '''
+        return bool(subprocess.check_output(['docker', 'ps', '-a', '--format', '{{json .}}', '--filter', 'Name=^%s$' % container]))
+                    
+    def is_running(self, container):
+        '''
+        Check if a cotainer is running
+        '''
+        return subprocess.check_output(['docker', 'inspect', '-f', '{{.State.Running}}', container]) == 'true'
 
+    def stop(self, container):
+        check_call(['docker', 'stop', container])
 
 @click.group()
 def cli():
@@ -94,38 +100,86 @@ def check_output(cmd, input=None, **kwargs):
     return subprocess.run(cmd,  check=True, stdout=subprocess.PIPE, **kwargs).stdout
 
 @cli.command()
-@click.option('--delete-existing', is_flag=True)
-@click.option('--pg_port', default='54321')  # instead of PostgreSQL default port 5432
-@click.option('--http_port', default='8080')  # instead of HTTP default port 80
-def install(delete_existing, pg_port, http_port):
-    directory = osp.dirname(osp.dirname(osp.abspath(__file__)))
+def install():
+    container = Docker()
+    directory = container.directory
     print('Creating new cati_portal instance in', directory)
-    base_simg = osp.join(directory, 'base.simg')
-    cati_portal_simg = osp.join(directory, 'cati_portal.simg')
-    git = osp.join(directory, 'git')
-    venv = osp.join(directory, 'venv')
 
-    singularity = Singularity()
-
-    if delete_existing:
-        if osp.exists(venv):
-            print('Delete', venv)
-            shutil.rmtree(venv)
-
-    singularity_dir =  osp.join(git, 'singularity')
-    if not osp.exists(base_simg):
-        singularity.build(base_simg, singularity_dir, 'base.recipe')
-    if not osp.exists(cati_portal_simg):
-        singularity.build(cati_portal_simg, singularity_dir, 'cati_portal.recipe')
-
-    if not osp.exists(venv):
-        singularity(['python3', '-m', 'venv', '--system-site-packages', '/cati_portal/venv'])
+    config_file = osp.join(directory, 'cati_portal_install.json')
+    if not osp.exists(config_file):
+        config_file_src = osp.join(directory, 'git', 'cati_portal_install.json')
+        open(config_file, 'w').write(open(config_file_src).read())
+    config = json.load(open(config_file))
+    
+    container.build(container.ldap_image, 'openldap')
+    container.build(container.sftp_image, 'openssh')
+    container.build(container.portal_image, 'portal')
+    container.pull('osixia/phpldapadmin')
+    container.build(container.postgres_image, 'postgres')
+    
+    postgres_secret_file = osp.join(container.run, 'postgres_secret')
+    if not osp.exists(container.run):
+        os.mkdir(container.run)
+        open(postgres_secret_file, 'w').write(secrets.token_urlsafe())
+    
+    if not osp.exists(container.postgres):
+        os.mkdir(container.postgres)
+        container([], image=container.postgres_image, name=container.postgres_container, daemon=True)
+        container.stop(container.postgres_container)
+        
+    if not osp.exists(container.venv):
+        container(['python3', '-m', 'venv', '--system-site-packages', '/cati_portal/venv'])
         pip = '/cati_portal/venv/bin/pip'
-        singularity([pip, 'install', '--upgrade', 'pip'])
-        singularity([pip, 'install', '--editable', '/cati_portal/git'])
+        container([pip, 'install', '--upgrade', 'pip'])
+        container([pip, 'install', '--editable', '/cati_portal/git'])
 
-    singularity(['/cati_portal/venv/bin/python', '-m', 'cati_portal.install', str(delete_existing), pg_port, http_port])
+    #container(['/cati_portal/venv/bin/python', '-m', 'cati_portal.install', str(delete_existing), http_port, ssh_port])
 
+
+@cli.command()
+def shell():
+    container = Docker()
+    container.shell()
+
+@cli.command()
+def status():
+    container = Docker()
+    config_file = osp.join(container.directory, 'cati_portal_install.json')
+    if not osp.exists(config_file):
+        print('ERROR: cati_portal is not installed: missing file', config_file)
+        sys.exit(1)
+    config = json.load(open(config_file))
+    
+    if 'ldap_container' in config:
+        if not container.exists(container.ldap_container):
+            print('ERROR: container', container.ldap_container, 'does not exist')
+        else:
+            print('container', container.ldap_container, 'is', 
+                  ('running' if container.is_running(container.ldap_container)
+                   else 'stopped'))
+
+    if 'sftp_container' in config:
+        if not container.exists(container.sftp_container):
+            print('ERROR: container', container.sftp_container, 'does not exist')
+        else:
+            print('container', container.sftp_container, 'is', 
+                  ('running' if container.is_running(container.sftp_container)
+                   else 'stopped'))
+        
+    if not container.exists(container.postgres_container):
+        print('ERROR: container', container.postgres_container, 'does not exist')
+    else:
+        print('container', container.postgres_container, 'is', 
+                ('running' if container.is_running(container.postgres_container)
+                else 'stopped'))
+        
+    if not container.exists(container.portal_container):
+        print('ERROR: container', container.portal_container, 'does not exist')
+    else:
+        print('container', container.portal_container, 'is', 
+                ('running' if container.is_running(container.portal_container)
+                else 'stopped'))
+        
 
 @cli.command()
 def start():
@@ -143,10 +197,6 @@ def restart():
     singularity.stop('cati_portal')
     singularity.start('cati_portal')
 
-@cli.command()
-def shell():
-    singularity = Singularity()
-    singularity.shell('cati_portal')
 
 
 if __name__ == '__main__':

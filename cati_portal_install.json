@@ -1,0 +1,9 @@
+{
+    "sftp_container": {
+        "ssh_port": 2222
+    },
+    "ldap_container": {},
+    "portal_container": {
+        "http_port": 8080
+    }
+}

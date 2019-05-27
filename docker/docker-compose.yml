@@ -1,0 +1,64 @@
+version: '3.7'
+services:
+  ldap:
+    container_name: ldap
+    image: ldap
+    build:
+        context: ./openldap
+    environment:
+      LDAP_ORGANISATION: "Le CATI"
+      LDAP_DOMAIN: cati.cea.fr
+      LDAP_ADMIN_PASSWORD: "kelrangement"
+      LDAP_TLS_VERIFY_CLIENT: never
+    #ports:
+      #- 389:389
+    hostname: ldap-host
+  
+  phpldapadmin:
+    container_name: phpldapadmin
+    image: osixia/phpldapadmin
+    links:
+      - ldap:ldap-host
+    environment:
+      PHPLDAPADMIN_LDAP_HOSTS: ldap-host
+  
+  sftp:
+    container_name: sftp
+    image: sftp
+    build:
+        context: ./sftp
+        #network: host
+    volumes:
+      - /tmp/sftp:/sftp/data
+    ports:
+      - "2222:22"
+    links:
+      - ldap:ldap-host
+    #dns:
+      #- 132.166.192.7
+      #- 132.166.192.6
+    environment:
+      LDAP_URI: ldap://ldap-host/
+      LDAP_BASE: dc=cati,dc=cea,dc=fr
+      LDAP_HOMEDIR: "/data/%u"
+      #LDAP_ATTR_SSHPUBLICKEY: sshPublicKey
+      SFTP_CHROOT: /sftp
+      LDAP_BASE_USER: ou=users,dc=cati,dc=cea,dc=fr
+      LDAP_BASE_GROUP: ou=groups,dc=cati,dc=cea,dc=fr
+      LDAP_BIND_USER: cn=admin,dc=cati,dc=cea,dc=fr
+      LDAP_BIND_PWD: "kelrangement"
+      #LDAP_TLS_CACERT: /etc/ssl/ca.crt
+      #LDAP_TLS_CERT: /etc/ssl/cert.crt
+      #LDAP_TLS_KEY :/etc/ssl/cert.key
+
+  cati_portal:
+    container_name: cati_portal
+    image: cati_portal
+    build:
+      context: ./portal
+    links:
+      - ldap:ldap-host
+      - sftp:sftp-host
+    environment:
+      
+      

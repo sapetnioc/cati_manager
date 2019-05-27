@@ -1,0 +1,30 @@
+version: 1
+
+dn: ou=groups,dc=cati,dc=cea,dc=fr
+objectclass: organizationalUnit
+objectclass: top
+ou: groups
+
+dn: cn=user,ou=groups,dc=cati,dc=cea,dc=fr
+cn: user
+gidnumber: 500
+objectclass: posixGroup
+objectclass: top
+
+dn: ou=users,dc=cati,dc=cea,dc=fr
+objectclass: organizationalUnit
+objectclass: top
+ou: users
+
+dn: cn=Yann Cointepas,ou=users,dc=cati,dc=cea,dc=fr
+cn: Yann Cointepas
+gidnumber: 500
+givenname: Yann
+homedirectory: /home/users/yann
+objectclass: inetOrgPerson
+objectclass: posixAccount
+objectclass: top
+sn: Cointepas
+uid: yann
+uidnumber: 1000
+userpassword: {MD5}GCt4F+gtbrSmEHpDG5L6Kw==

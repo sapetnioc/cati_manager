@@ -2,6 +2,7 @@ BootStrap: localimage
 From: ../../base.simg
 
 %post
+    apt-get update && apt-get -y install openssh-server
 
 %environment:
     export CATI_PORTAL_DIR="/cati_portal"
