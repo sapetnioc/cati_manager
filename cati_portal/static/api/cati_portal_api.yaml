@@ -1,0 +1,206 @@
+openapi: 3.0.2
+info:
+  title: CATI portal API
+  description: The REST API for CATI portal
+  version: 0.0.1
+components:
+  securitySchemes:
+    api_key:
+      type: apiKey
+      name: the_security_cookie
+      in: cookie
+  schemas:
+    Exception:
+      type: object
+      required:
+      - message
+      properties:
+        message:
+          type: string
+        traceback:
+          type: string
+    
+    NewIdentity:
+      required:
+      - login
+      - password
+      - email
+      properties:
+        login:
+          type: string
+        password:
+          type: string
+          format: byte
+        email:
+          type: string
+        first_name:
+          type: string
+        last_name:
+          type: string
+        institution:
+          type: string
+    Identity:
+      allOf:
+      - $ref: "#/components/schemas/NewIdentity"
+      -
+        properties:
+          registration_time:
+            type: string
+            format: date-time
+          email_verification_time:
+            type: string
+            format: date-time
+          activation_time:
+            type: string
+            format: date-time
+          deactivation_time:
+            type: string
+            format: date-time
+    SqlChangeset:
+      required:
+      - name
+      - sql_changesets
+      properties:
+        name:
+          type: string
+        sql_changesets:
+          type: array
+          items:
+            type: string
+    SqlModel:
+      required:
+      - name
+      - sql_changesets
+      properties:
+        name:
+          type: string
+        sql_changesets:
+          type: array
+          items:
+            $ref: "#/components/schemas/SqlChangeset"
+security:
+- api_key: []    
+
+paths:
+  /install:
+    post:
+      summary: "Perform server installation"
+      requestBody:
+        description: parameters
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                installation_hash:
+                  type: string
+                admin:
+                  $ref: "#/components/schemas/Identity"
+      responses:
+        default:
+          description: Unexpected error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Exception'
+
+        204:
+          description: Success
+
+  /sql_models:
+    get:
+      summary: "list all SQL model names"
+      responses:
+        default:
+          description: Unexpected error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Exception'
+
+        200:
+          description: Success
+          content: 
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: string
+    post:
+      summary: "create a new SQL model"
+      requestBody:
+        description: sql_model parameter
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SqlModel"
+      responses:
+        default:
+          description: Unexpected error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Exception'
+
+        204:
+          description: Success
+
+  /sql_models/{sql_model_id}:
+    parameters:
+    - name: sql_model_id
+      in: path
+      required: true
+      schema:
+        type: string
+
+    get:
+      summary: "get SQL model content"
+      responses:
+        default:
+          description: Unexpected error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Exception'
+
+        200:
+          description: Success
+          content: 
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SqlModel"
+    post:
+      summary: "adds a new SQL changeset to an SQL model"
+      requestBody:
+        description: sql_changeset parameter
+        required: true
+        content:
+          application/json:
+            schema:
+              type: string
+      responses:
+        default:
+          description: Unexpected error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Exception'
+
+        204:
+          description: Success
+
+    delete:
+      summary: "delete an SQL model"
+      responses:
+        default:
+          description: Unexpected error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Exception'
+
+        204:
+          description: Success
+

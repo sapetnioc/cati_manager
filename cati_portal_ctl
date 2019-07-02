@@ -62,7 +62,10 @@ class Docker:
                 sys.exit(1)
         else:
             # Container does not exists, start a shell in a temporary container
-            check_call(['docker', 'run', '--rm', '-it', '-v', '%s:/cati_portal' % self.directory, self.portal_image, 'bash'])
+            check_call(['docker', 'run', '--rm', '--network=host', '-it', '-v', '%s:/cati_portal' % self.directory, self.portal_image, 'bash'])
+
+    def create(self):
+        check_call(['docker', 'create', '-v', '%s:/cati_portal' % self.directory, self.portal_image, 'bash'])
 
     def exists(self, container):
         '''
@@ -150,8 +153,10 @@ def status():
         sys.exit(1)
     config = json.load(open(config_file))
     
+    exit = 0
     if 'ldap_container' in config:
         if not container.exists(container.ldap_container):
+            exit = 1
             print('ERROR: container', container.ldap_container, 'does not exist')
         else:
             print('container', container.ldap_container, 'is', 
@@ -160,6 +165,7 @@ def status():
 
     if 'sftp_container' in config:
         if not container.exists(container.sftp_container):
+            exit = 1
             print('ERROR: container', container.sftp_container, 'does not exist')
         else:
             print('container', container.sftp_container, 'is', 
@@ -167,6 +173,7 @@ def status():
                    else 'stopped'))
         
     if not container.exists(container.postgres_container):
+        exit = 1
         print('ERROR: container', container.postgres_container, 'does not exist')
     else:
         print('container', container.postgres_container, 'is', 
@@ -174,12 +181,14 @@ def status():
                 else 'stopped'))
         
     if not container.exists(container.portal_container):
+        exit = 1
         print('ERROR: container', container.portal_container, 'does not exist')
     else:
         print('container', container.portal_container, 'is', 
                 ('running' if container.is_running(container.portal_container)
                 else 'stopped'))
-        
+    if exit:
+        sys.exit(exit)
 
 @cli.command()
 def start():
