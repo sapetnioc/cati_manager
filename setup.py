@@ -42,6 +42,7 @@ setup(
         'flask >= 1.0',
         'flask-login',
         'flask-wtf',
+        'email-validator',
         'psycopg2-binary >= 2.7',
         'click >= 5.0',
         'gunicorn',
