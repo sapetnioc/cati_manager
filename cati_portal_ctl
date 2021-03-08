@@ -13,27 +13,27 @@ import click
 class Singularity:
     def __init__(self):
         self.directory = osp.dirname(osp.dirname(osp.abspath(__file__)))
-        self.simg = osp.join(self.directory, 'cati_portal.simg')
+        self.sif = osp.join(self.directory, 'cati_portal.sif')
         self.tmp = osp.join(self.directory, 'tmp')
         self.env = os.environ.copy()
         self.env['SINGULARITY_TMPDIR'] = self.tmp
 
     def __call__(self, cmd, **kwargs):
-        check_call(['singularity', 'run', '-B', '%s:/cati_portal' % self.directory, self.simg] + cmd,
+        check_call(['singularity', 'run', '-B', '%s:/cati_portal' % self.directory, self.sif] + cmd,
                    env=self.env, **kwargs)
 
     def output(self, cmd, **kwargs):
-        return check_output(['singularity', 'run', '-B', '%s:/cati_portal' % self.directory, self.simg] + cmd,
+        return check_output(['singularity', 'run', '-B', '%s:/cati_portal' % self.directory, self.sif] + cmd,
                    env=self.env, **kwargs)
 
     def start(self, name):
-        check_call(['singularity', 'instance.start', '-B', '%s:/cati_portal' % self.directory, self.simg, name],
+        check_call(['singularity', 'instance', 'start', '-B', '%s:/cati_portal' % self.directory, self.sif, name],
                    env=self.env)
 
     def stop(self, name):
-        check_call(['singularity', 'instance.stop', name],
+        check_call(['singularity', 'instance', 'stop', name],
                    env=self.env)
-        for f in glob.glob(osp.join(self.tmp, 'cati_portal.simg.%s.*' % name)):
+        for f in glob.glob(osp.join(self.tmp, 'cati_portal.sif.%s.*' % name)):
             os.remove(f)
 
     def shell(self, name):
@@ -41,7 +41,7 @@ class Singularity:
 
         # Check if the Singularity instance is running
         running = False
-        process = subprocess.Popen(['singularity', 'instance.list'], stdout=subprocess.PIPE)
+        process = subprocess.Popen(['singularity', 'instance','list'], stdout=subprocess.PIPE)
         output, unused_err = process.communicate()
         output=output.decode()
         instances = set(line.split()[0] for line in output.split('\n')[1:] if line)
@@ -49,7 +49,7 @@ class Singularity:
             check_call(['singularity', 'shell', instance_name],
                     env=self.env)
         else:
-            check_call(['singularity', 'shell',  '-B', '%s:/cati_portal' % self.directory, self.simg],
+            check_call(['singularity', 'shell',  '-B', '%s:/cati_portal' % self.directory, self.sif],
                     env=self.env)
 
     def build(self, output_image, singularity_dir, recipe_file):
@@ -64,7 +64,7 @@ class Singularity:
             use_tmp = False
             subprocess.check_call(['sudo', 'rm', test_file])
         if use_tmp:
-            tmp = tempfile.NamedTemporaryFile(suffix='.simg')
+            tmp = tempfile.NamedTemporaryFile(suffix='.sif')
             os.remove(tmp.name)
             check_call(['sudo', 'singularity', 'build', tmp.name, osp.join(singularity_dir, recipe_file)], cwd=singularity_dir)
             subprocess.check_call(['sudo', 'chown', '%s:%s' % (os.environ['USER'],os.environ['USER']), tmp.name])
@@ -100,8 +100,8 @@ def check_output(cmd, input=None, **kwargs):
 def install(delete_existing, pg_port, http_port):
     directory = osp.dirname(osp.dirname(osp.abspath(__file__)))
     print('Creating new cati_portal instance in', directory)
-    base_simg = osp.join(directory, 'base.simg')
-    cati_portal_simg = osp.join(directory, 'cati_portal.simg')
+    base_sif = osp.join(directory, 'base.sif')
+    cati_portal_sif = osp.join(directory, 'cati_portal.sif')
     git = osp.join(directory, 'git')
     venv = osp.join(directory, 'venv')
 
@@ -113,10 +113,10 @@ def install(delete_existing, pg_port, http_port):
             shutil.rmtree(venv)
 
     singularity_dir =  osp.join(git, 'singularity')
-    if not osp.exists(base_simg):
-        singularity.build(base_simg, singularity_dir, 'base.recipe')
-    if not osp.exists(cati_portal_simg):
-        singularity.build(cati_portal_simg, singularity_dir, 'cati_portal.recipe')
+    if not osp.exists(base_sif):
+        singularity.build(base_sif, singularity_dir, 'base.recipe')
+    if not osp.exists(cati_portal_sif):
+        singularity.build(cati_portal_sif, singularity_dir, 'cati_portal.recipe')
 
     if not osp.exists(venv):
         singularity(['python3', '-m', 'venv', '--system-site-packages', '/cati_portal/venv'])
