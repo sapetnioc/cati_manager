@@ -3,7 +3,7 @@ From: ../../base.simg
 
 %post
 
-%environment:
+%environment
     export CATI_PORTAL_DIR="/cati_portal"
     export PGDATA="$CATI_PORTAL_DIR/postgresql"
     export PGHOST=$CATI_PORTAL_DIR/run
